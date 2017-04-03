@@ -181,6 +181,19 @@ describe("Linquish", function () {
                 done();
             });
         });
+        it('select timeout', function (done) {
+            var ints = [2, 10, 50, 100, 200];
+            linquish(ints)
+                .select(function (n, output) {
+                setTimeout(function () {
+                    output(n);
+                }, n);
+            }, 60)
+                .run(function (result) {
+                expect(result, 'Shoud be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
+                done();
+            });
+        });
     });
     describe("selectMany", function () {
         it("select many - find primes between 0 and 45", function (done) {

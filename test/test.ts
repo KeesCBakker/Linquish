@@ -244,6 +244,25 @@ describe("Linquish", function () {
                 });
         });
 
+        it('select timeout', function (done) {
+
+            var ints = [2, 10, 50, 100, 200];
+
+            linquish<number>(ints)
+                .select((n, output) => {
+
+                    setTimeout(() => {
+                        output(n);
+                    }, n);
+
+                }, 60)
+                .run((result) => {
+                    expect(result, 'Shoud be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
+                    done();
+                });
+
+        });
+
     });
 
     describe("selectMany", function () {
@@ -349,7 +368,7 @@ describe("Linquish", function () {
                     done(n.toString().indexOf('2') != -1);
                 })
                 .run((result) => {
-                    expect(result).to.deep.equal([2, 23 ]);
+                    expect(result).to.deep.equal([2, 23]);
                     done();
                 });
 

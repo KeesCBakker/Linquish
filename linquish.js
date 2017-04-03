@@ -116,7 +116,7 @@ var Sub = (function (_super) {
         this.array.forEach(function (a) { return a.run(); });
     };
     Sub.IsFinishedState = function (type) {
-        return type == StateType.Error || type == StateType.Finished || type == StateType.Skip;
+        return type == StateType.Error || type == StateType.Finished || type == StateType.Skip || type == StateType.Timeout;
     };
     Sub.IsWaitingState = function (type) {
         return type == StateType.Wait || Sub.IsFinishedState(type);
@@ -129,7 +129,8 @@ var StateType;
     StateType[StateType["Skip"] = 1] = "Skip";
     StateType[StateType["Wait"] = 2] = "Wait";
     StateType[StateType["Error"] = 3] = "Error";
-    StateType[StateType["Finished"] = 4] = "Finished";
+    StateType[StateType["Timeout"] = 4] = "Timeout";
+    StateType[StateType["Finished"] = 5] = "Finished";
 })(StateType || (StateType = {}));
 var Section = (function () {
     function Section(item, owner) {
@@ -167,7 +168,7 @@ var Section = (function () {
     };
     Section.prototype.get = function () {
         var array = new Array();
-        if (this.state != StateType.Skip) {
+        if (this.state == StateType.Finished) {
             if (this.item instanceof BaseSub) {
                 this.item.get().forEach(function (a) {
                     array.push(a);
@@ -182,9 +183,8 @@ var Section = (function () {
     return Section;
 }());
 var Action = (function () {
-    function Action(name, timeout) {
+    function Action(name) {
         this.name = name;
-        this.timeout = timeout;
     }
     Action.prototype.execute = function (section) {
         try {
@@ -194,19 +194,39 @@ var Action = (function () {
             section.setState(StateType.Error);
         }
     };
+    Action.createTimeout = function (timeout, section) {
+        if (timeout != null) {
+            return setTimeout(function () {
+                section.setState(StateType.Timeout);
+            }, timeout);
+        }
+        return null;
+    };
+    Action.conditionalExecute = function (timeoutId, section, delegate) {
+        if (timeoutId != null) {
+            clearTimeout(timeoutId);
+        }
+        if (section.state != StateType.Timeout) {
+            delegate();
+        }
+    };
     return Action;
 }());
 var SelectAction = (function (_super) {
     __extends(SelectAction, _super);
     function SelectAction(callback, timeout) {
-        var _this = _super.call(this, 'select', timeout) || this;
+        var _this = _super.call(this, 'select') || this;
         _this.callback = callback;
+        _this.timeout = timeout;
         return _this;
     }
     SelectAction.prototype.run = function (section) {
+        var t = Action.createTimeout(this.timeout, section);
         this.callback(section.item, function (output) {
-            section.item = output;
-            section.run();
+            Action.conditionalExecute(t, section, function () {
+                section.item = output;
+                section.run();
+            });
         });
     };
     return SelectAction;
@@ -214,18 +234,22 @@ var SelectAction = (function (_super) {
 var WhereAction = (function (_super) {
     __extends(WhereAction, _super);
     function WhereAction(callback, timeout) {
-        var _this = _super.call(this, 'where', timeout) || this;
+        var _this = _super.call(this, 'where') || this;
         _this.callback = callback;
+        _this.timeout = timeout;
         return _this;
     }
     WhereAction.prototype.run = function (section) {
+        var t = Action.createTimeout(this.timeout, section);
         this.callback(section.item, function (include) {
-            if (!include) {
-                section.setState(StateType.Skip);
-            }
-            else {
-                section.run();
-            }
+            Action.conditionalExecute(t, section, function () {
+                if (!include) {
+                    section.setState(StateType.Skip);
+                }
+                else {
+                    section.run();
+                }
+            });
         });
     };
     return WhereAction;
@@ -233,34 +257,44 @@ var WhereAction = (function (_super) {
 var ForEachAction = (function (_super) {
     __extends(ForEachAction, _super);
     function ForEachAction(callback, timeout) {
-        var _this = _super.call(this, 'each', timeout) || this;
+        var _this = _super.call(this, 'each') || this;
         _this.callback = callback;
+        _this.timeout = timeout;
         return _this;
     }
     ForEachAction.prototype.run = function (section) {
-        this.callback(section.item, function () { return section.run(); });
+        var t = Action.createTimeout(this.timeout, section);
+        this.callback(section.item, function () {
+            Action.conditionalExecute(t, section, function () {
+                section.run();
+            });
+        });
     };
     return ForEachAction;
 }(Action));
 var SelectManyAction = (function (_super) {
     __extends(SelectManyAction, _super);
     function SelectManyAction(callback, timeout) {
-        var _this = _super.call(this, 'selectMany', timeout) || this;
+        var _this = _super.call(this, 'selectMany') || this;
         _this.callback = callback;
+        _this.timeout = timeout;
         return _this;
     }
     SelectManyAction.prototype.run = function (section) {
+        var t = Action.createTimeout(this.timeout, section);
         this.callback(section.item, function (output) {
-            if (output == null || output.length == 0) {
-                section.setState(StateType.Skip);
-            }
-            else {
-                var sub = new Sub(section.owner.actions, output, section.nr);
-                section.item = sub;
-                sub.run(function () {
-                    section.setState(StateType.Finished);
-                });
-            }
+            Action.conditionalExecute(t, section, function () {
+                if (output == null || output.length == 0) {
+                    section.setState(StateType.Skip);
+                }
+                else {
+                    var sub = new Sub(section.owner.actions, output, section.nr);
+                    section.item = sub;
+                    sub.run(function () {
+                        section.setState(StateType.Finished);
+                    });
+                }
+            });
         });
     };
     return SelectManyAction;

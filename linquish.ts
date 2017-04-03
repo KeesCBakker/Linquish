@@ -9,7 +9,7 @@ if (typeof (module) === 'undefined') {
         w.exports = w.exports || w.module.exports || {};
         w.require = w.require || function (src) {
             return w[src] || w.exports;
-        }
+        } 
     }(window || {}));
 }
 
@@ -147,7 +147,7 @@ class Sub<T> extends BaseSub {
     }
 
     public static IsFinishedState(type: StateType) {
-        return type == StateType.Error || type == StateType.Finished || type == StateType.Skip;
+        return type == StateType.Error || type == StateType.Finished || type == StateType.Skip || type == StateType.Timeout;
     }
 
     public static IsWaitingState(type: StateType) {
@@ -160,6 +160,7 @@ enum StateType {
     Skip,
     Wait,
     Error,
+    Timeout,
     Finished
 }
 
@@ -206,7 +207,7 @@ class Section {
 
         var array = new Array<any>();
 
-        if (this.state != StateType.Skip) {
+        if (this.state == StateType.Finished) {
 
             if (this.item instanceof BaseSub) {
                 (<BaseSub>this.item).get().forEach(a => {
@@ -224,7 +225,7 @@ class Section {
 
 abstract class Action {
 
-    constructor(public name: string, public timeout?: number) { }
+    constructor(public name: string) { }
 
     public execute(section: Section): void {
         try {
@@ -236,77 +237,122 @@ abstract class Action {
     }
 
     protected abstract run(section: Section): void;
+
+    protected static createTimeout(timeout: number, section: Section): any {
+        if (timeout != null) {
+            return setTimeout(() => {
+                section.setState(StateType.Timeout);
+            }, timeout);
+        }
+
+        return null;
+    }
+
+    protected static conditionalExecute(timeoutId: any, section: Section, delegate: () => void): void {
+        if (timeoutId != null) {
+            clearTimeout(timeoutId);
+        }
+
+        if (section.state != StateType.Timeout) {
+            delegate();
+        }
+    }
 }
 
 class SelectAction<T, R> extends Action {
 
-    constructor(public callback: SelectCallbackType<T, R>, timeout?: number) {
-        super('select', timeout);
+    constructor(public callback: SelectCallbackType<T, R>, public timeout?: number) {
+        super('select');
     }
 
     protected run(section: Section): void {
 
+        var t = Action.createTimeout(this.timeout, section);
+
         this.callback(section.item, (output) => {
-            section.item = output;
-            section.run();
+
+            Action.conditionalExecute(t, section, () => {
+                section.item = output;
+                section.run();
+            });
+
         });
     }
-
 }
 
 class WhereAction<T> extends Action {
 
-    constructor(public callback: WhereCallbackType<T>, timeout?: number) {
-        super('where', timeout);
+    constructor(public callback: WhereCallbackType<T>, public timeout?: number) {
+        super('where');
     }
 
     protected run(section: Section): void {
 
+        var t = Action.createTimeout(this.timeout, section);
+
         this.callback(section.item, (include) => {
-            if (!include) {
-                section.setState(StateType.Skip);
-            }
-            else {
-                section.run();
-            }
+
+            Action.conditionalExecute(t, section, () => {
+
+                if (!include) {
+                    section.setState(StateType.Skip);
+                }
+                else {
+                    section.run();
+                }
+            });
+
         });
     }
 }
 
 class ForEachAction<T> extends Action {
 
-    constructor(public callback: ForEachCallbackType<T>, timeout?: number) {
-        super('each', timeout);
+    constructor(public callback: ForEachCallbackType<T>, public timeout?: number) {
+        super('each');
     }
 
     protected run(section: Section): void {
 
-        this.callback(section.item, () => section.run());
+        var t = Action.createTimeout(this.timeout, section);
+
+        this.callback(section.item, () => {
+
+            Action.conditionalExecute(t, section, () => {
+
+                section.run()
+            });
+        });
     }
 }
 
 class SelectManyAction<T, R> extends Action {
 
-    constructor(public callback: SelectManyCallbackType<T, R>, timeout?: number) {
-        super('selectMany', timeout);
+    constructor(public callback: SelectManyCallbackType<T, R>, public timeout?: number) {
+        super('selectMany');
     }
 
     protected run(section: Section): void {
 
+        var t = Action.createTimeout(this.timeout, section);
+
         this.callback(section.item, (output: Array<R>) => {
 
-            if (output == null || output.length == 0) {
-                section.setState(StateType.Skip);
-            }
-            else {
+            Action.conditionalExecute(t, section, () => {
 
-                var sub = new Sub(section.owner.actions, output, section.nr);
-                section.item = sub;
+                if (output == null || output.length == 0) {
+                    section.setState(StateType.Skip);
+                }
+                else {
 
-                sub.run(() => {
-                    section.setState(StateType.Finished);
-                });
-            }
+                    var sub = new Sub(section.owner.actions, output, section.nr);
+                    section.item = sub;
+
+                    sub.run(() => {
+                        section.setState(StateType.Finished);
+                    });
+                }
+            });
 
         });
     }
@@ -364,5 +410,3 @@ let exp: ILinquishStatic = function <T>(input: Array<T>): Linquish<T> {
 }
 
 module.exports = exp;
-
-
