@@ -161,10 +161,10 @@ describe("Linquish", function () {
                 ouput(prime);
             })
                 .run(function (result) {
-                expect(result, 'Should contain 7919').to.contain(7919);
-                expect(result, 'Should contain 17389').to.contain(17389);
-                expect(result, 'Should contain 37813').to.contain(37813);
-                expect(result, 'Should contain 81799').to.contain(81799);
+                expect(result, 'Should contain 1009').to.contain(1009);
+                expect(result, 'Should contain 2003').to.contain(2003);
+                expect(result, 'Should contain 4001').to.contain(4001);
+                expect(result, 'Should contain 8009').to.contain(8009);
                 done();
             });
         });
@@ -183,22 +183,22 @@ describe("Linquish", function () {
         });
     });
     describe("selectMany", function () {
-        it("select many - find primes between 0 and 1000", function (done) {
-            var ints = [10000];
+        it("select many - find primes between 0 and 45", function (done) {
+            var ints = [45];
             linquish(ints)
                 .selectMany(function (n, done) {
                 var primes = findPrimes(n);
                 done(primes);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [1, 2 , 3 , 5 , 11, 31, 127, 709, 5381]').to.deep.equal([1, 2, 3, 5, 11, 31, 127, 709, 5381]);
+                expect(result, 'Shoud be equal to [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43]').to.deep.equal([1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43]);
                 done();
             });
         });
     });
     describe('integration', function () {
-        it("selectMany -> select - find primes between 0 and 1000, select next prime", function (done) {
-            var ints = [10000];
+        it("selectMany -> select - find primes between 0 and 10, select next prime", function (done) {
+            var ints = [10];
             linquish(ints)
                 .selectMany(function (n, done) {
                 var primes = findPrimes(n);
@@ -208,11 +208,11 @@ describe("Linquish", function () {
                 done(findNextPrimeNumber(prime));
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [2 , 3 , 5 , 11, 31, 127, 709, 5381]').to.deep.equal([2, 3, 5, 11, 31, 127, 709, 5381, 52711]);
+                expect(result, 'Shoud be equal to [2, 3, 5, 7, 11]').to.deep.equal([2, 3, 5, 7, 11]);
                 done();
             });
         });
-        it("selectMany -> selectMany - find primes between 0 and 1000, select prime and next prime", function (done) {
+        it("selectMany -> selectMany - find primes between 0 and 10, select prime and next prime", function (done) {
             var ints = [10];
             linquish(ints)
                 .selectMany(function (n, done) {
@@ -227,7 +227,7 @@ describe("Linquish", function () {
                 done(primes);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [1, 2, 2, 3, 3, 5, 5, 11]').to.deep.equal([1, 2, 2, 3, 3, 5, 5, 11]);
+                expect(result, 'Shoud be equal to [1, 2, 2, 3, 3, 5, 5, 7, 7, 11]').to.deep.equal([1, 2, 2, 3, 3, 5, 5, 7, 7, 11]);
                 done();
             });
         });
@@ -245,27 +245,27 @@ describe("Linquish", function () {
                 done(findNextPrimeNumber(prime));
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [11, 31, 127]').to.deep.equal([11, 31, 127]);
+                expect(result, 'Shoud be equal to [7, 11, 13]').to.deep.equal([7, 11, 13]);
                 done();
             });
         });
-        it("select many -> where - find primes between 0 and 1000 that contain a 7", function (done) {
-            var ints = [10000];
+        it("select many -> where - find primes between 0 and 25 that contain a 2", function (done) {
+            var ints = [25];
             linquish(ints)
                 .selectMany(function (n, done) {
                 var primes = findPrimes(n);
                 done(primes);
             })
                 .where(function (n, done) {
-                done(n.toString().indexOf('7') != -1);
+                done(n.toString().indexOf('2') != -1);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [127, 709]').to.deep.equal([127, 709]);
+                expect(result).to.deep.equal([2, 23]);
                 done();
             });
         });
-        it("select many -> where -> where - find primes between 0 and 1000 that contain a 2 and a 7", function (done) {
-            var ints = [10000];
+        it("select many -> where -> where - find primes between 0 and 250 that contain a 2 and a 7", function (done) {
+            var ints = [250];
             linquish(ints)
                 .selectMany(function (n, done) {
                 var primes = findPrimes(n);
@@ -278,31 +278,35 @@ describe("Linquish", function () {
                 done(n.toString().indexOf('7') != -1);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [127]').to.deep.equal([127]);
+                expect(result, 'Shoud be equal to [127, 227]').to.deep.equal([127, 227]);
                 done();
             });
         });
     });
 });
 function findNextPrimeNumber(n) {
-    var count = 0;
-    var a = 2;
-    while (count < n) {
-        var b = 2;
-        var prime = 1; // to check if found a prime
-        while (b * b <= a) {
-            if (a % b == 0) {
-                prime = 0;
-                break;
+    var a = 1;
+    do {
+        if (a > n) {
+            return a;
+        }
+        a = findNextPrimeNumberBasedOnPrime(a);
+    } while (true);
+}
+function findNextPrimeNumberBasedOnPrime(prime) {
+    if (prime > 2) {
+        var i, q;
+        do {
+            i = 3;
+            prime += 2;
+            q = Math.floor(Math.sqrt(prime));
+            while (i <= q && prime % i) {
+                i += 2;
             }
-            b++;
-        }
-        if (prime > 0) {
-            count++;
-        }
-        a++;
+        } while (i <= q);
+        return prime;
     }
-    return (--a);
+    return prime === 2 ? 3 : 2;
 }
 function findPrimes(max) {
     var primes = new Array();
