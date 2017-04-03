@@ -1,0 +1,22 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "declaration": true,
+    "noImplicitAny": false,
+    "removeComments": false,
+    "preserveConstEnums": true,
+    "sourceMap": false,
+    "target": "es5",
+    "noEmitOnError": false
+  },
+  "files": [
+    "linquish.ts",
+    "test/test.ts"
+  ],
+  "exclude": [
+    "linquish.js",
+    "linquish.d.ts",
+    "node_modules",
+    "typings"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "name": "linquish",
+  "version": "0.0.1",
+  "description": "Add something that feels like async linq queues.",
+  "main": "./linquish.js",
+  "types": "./linquish.d.ts",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha --reporter spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KeesCBakker/Linquish.git"
+  },
+  "keywords": [
+    "events",
+    "event",
+    "sender",
+    "args",
+    "strongly",
+    "typed",
+    "typescript",
+    "signal",
+    "DotNet"
+  ],
+  "author": "Kees C. Bakker (https://keestalkstech.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/KeesCBakker/Linquish/issues"
+  },
+  "homepage": "https://github.com/KeesCBakker/Linquish#readme",
+  "devDependencies": {
+    "blanket": "^1.2.3",
+    "chai": "^3.5.0",
+    "coveralls": "^2.11.12",
+    "istanbul": "^0.4.4",
+    "mocha": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=4.2.4"
+  },
+  "dependencies": {
+    "strongly-typed-events": "^0.5.0"
+  }
+}
