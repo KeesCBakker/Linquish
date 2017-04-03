@@ -4,11 +4,14 @@
 'use strict';
 var expect = require('chai').expect;
 var linquish_1 = require("../linquish");
+var linquish = function (input) {
+    return new linquish_1.Linquish(input);
+};
 describe("Linquish", function () {
     describe("run", function () {
         it("run with callback", function (done) {
             var ints = [1, 2, 4, 8, 16];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .run(function (outputs) {
                 expect(outputs, 'Should be equal to [1, 2, 4, 8, 16]').to.deep.equal([1, 2, 4, 8, 16]);
                 done();
@@ -19,7 +22,7 @@ describe("Linquish", function () {
         it("standard each", function (done) {
             var ints = [1, 2, 4, 8, 16];
             var result = [];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .forEach(function (n, ready) {
                 result.push(n);
                 ready();
@@ -36,7 +39,7 @@ describe("Linquish", function () {
         it("async each", function (done) {
             var ints = [1, 2, 4, 8, 16];
             var result = [];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .forEach(function (n, ready) {
                 setTimeout(function () {
                     result.push(n);
@@ -55,18 +58,18 @@ describe("Linquish", function () {
     });
     describe("wait", function () {
         it("wait for timeouts", function (done) {
-            var ints = [40, 20, 10, 5];
+            var ints = [10, 5, 2, 1];
             var result = new Array();
             var selectExecuted = false;
             var foreachExecuted = false;
             var i = 1;
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .select(function (n, done) {
                 selectExecuted = true;
                 setTimeout(function () {
                     result.push(n);
                     done(n * n);
-                }, n * 10);
+                }, n);
             })
                 .wait()
                 .forEach(function (n, done) {
@@ -74,10 +77,10 @@ describe("Linquish", function () {
                 expect(result.length, 'Should be 4').to.eq(4);
                 done();
             })
-                .run(function () {
+                .run(function (result) {
                 expect(selectExecuted, 'selectExecuted should be true').to.eq(true);
                 expect(foreachExecuted, 'foreachExecuted should be true').to.eq(true);
-                expect(result.length, 'Should be 4').to.eq(4);
+                expect(result, 'Shoud be equal to [100, 25, 4, 1]').to.deep.equal([100, 25, 4, 1]);
                 done();
             });
         });
@@ -85,7 +88,7 @@ describe("Linquish", function () {
     describe("where", function () {
         it("where uneven", function (done) {
             var ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .where(function (n, done) {
                 done(n % 2 != 0);
             })
@@ -97,7 +100,7 @@ describe("Linquish", function () {
         it("async each", function (done) {
             var ints = [1, 2, 4, 8, 16];
             var result = [];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .forEach(function (n, ready) {
                 setTimeout(function () {
                     result.push(n);
@@ -117,7 +120,7 @@ describe("Linquish", function () {
     describe("select", function () {
         it("select power", function (done) {
             var ints = [1, 2, 4, 8, 16];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .select(function (n, ouput) {
                 ouput(n * n);
             })
@@ -132,7 +135,7 @@ describe("Linquish", function () {
         });
         it("select factorial", function (done) {
             var ints = [1, 2, 4, 8, 16];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .select(function (n, ouput) {
                 var result = n, i = n;
                 while (i > 1) {
@@ -151,8 +154,8 @@ describe("Linquish", function () {
             });
         });
         it("select prime", function (done) {
-            var ints = [1000, 2000, 4000, 8000, 16000];
-            new linquish_1.Linquish(ints)
+            var ints = [1000, 2000, 4000, 8000];
+            linquish(ints)
                 .select(function (n, ouput) {
                 var prime = findNextPrimeNumber(n);
                 ouput(prime);
@@ -162,14 +165,13 @@ describe("Linquish", function () {
                 expect(result, 'Should contain 17389').to.contain(17389);
                 expect(result, 'Should contain 37813').to.contain(37813);
                 expect(result, 'Should contain 81799').to.contain(81799);
-                expect(result, 'Should contain 176081').to.contain(176081);
                 done();
             });
         });
         it("select number to string", function (done) {
             var ints = [9, 8, 0];
             var alphabet = getGreekAlphaBet();
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .select(function (n, output) {
                 var c = alphabet[n];
                 output(c);
@@ -183,7 +185,7 @@ describe("Linquish", function () {
     describe("selectMany", function () {
         it("select many - find primes between 0 and 1000", function (done) {
             var ints = [10000];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .selectMany(function (n, done) {
                 var primes = findPrimes(n);
                 done(primes);
@@ -197,7 +199,7 @@ describe("Linquish", function () {
     describe('integration', function () {
         it("selectMany -> select - find primes between 0 and 1000, select next prime", function (done) {
             var ints = [10000];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .selectMany(function (n, done) {
                 var primes = findPrimes(n);
                 done(primes);
@@ -212,7 +214,7 @@ describe("Linquish", function () {
         });
         it("selectMany -> selectMany - find primes between 0 and 1000, select prime and next prime", function (done) {
             var ints = [10];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .selectMany(function (n, done) {
                 var primes = findPrimes(n);
                 done(primes);
@@ -232,7 +234,7 @@ describe("Linquish", function () {
         it("select -> select -> select - find the next next prime.", function (done) {
             var ints = [2, 3, 5];
             var result = new Array();
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .select(function (prime, done) {
                 done(findNextPrimeNumber(prime));
             })
@@ -247,18 +249,36 @@ describe("Linquish", function () {
                 done();
             });
         });
-        it("select many -> where - find primes between 100 and 1000", function (done) {
+        it("select many -> where - find primes between 0 and 1000 that contain a 7", function (done) {
             var ints = [10000];
-            new linquish_1.Linquish(ints)
+            linquish(ints)
                 .selectMany(function (n, done) {
                 var primes = findPrimes(n);
                 done(primes);
             })
                 .where(function (n, done) {
-                done(n > 100);
+                done(n.toString().indexOf('7') != -1);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [127, 709, 5381]').to.deep.equal([127, 709, 5381]);
+                expect(result, 'Shoud be equal to [127, 709]').to.deep.equal([127, 709]);
+                done();
+            });
+        });
+        it("select many -> where -> where - find primes between 0 and 1000 that contain a 2 and a 7", function (done) {
+            var ints = [10000];
+            linquish(ints)
+                .selectMany(function (n, done) {
+                var primes = findPrimes(n);
+                done(primes);
+            })
+                .where(function (n, done) {
+                done(n.toString().indexOf('2') != -1);
+            })
+                .where(function (n, done) {
+                done(n.toString().indexOf('7') != -1);
+            })
+                .run(function (result) {
+                expect(result, 'Shoud be equal to [127]').to.deep.equal([127]);
                 done();
             });
         });
