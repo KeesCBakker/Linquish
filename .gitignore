@@ -3,7 +3,9 @@
 *.config
 .vs
 .vscode
+.gitattributes
 *.njsproj
+*.njsproj.user
 examples/*.js
 examples/*.map
 examples/*.d.ts
