@@ -81,7 +81,7 @@ describe("Linquish", function () {
                 .run(function (result) {
                 expect(selectExecuted, 'selectExecuted should be true').to.eq(true);
                 expect(foreachExecuted, 'foreachExecuted should be true').to.eq(true);
-                expect(result, 'Shoud be equal to [100, 25, 4, 1]').to.deep.equal([100, 25, 4, 1]);
+                expect(result, 'Should be equal to [100, 25, 4, 1]').to.deep.equal([100, 25, 4, 1]);
                 done();
             });
         });
@@ -94,7 +94,7 @@ describe("Linquish", function () {
                 done(n % 2 != 0);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [1, 3, 5, 7, 9]').to.deep.equal([1, 3, 5, 7, 9]);
+                expect(result, 'Should be equal to [1, 3, 5, 7, 9]').to.deep.equal([1, 3, 5, 7, 9]);
                 done();
             });
         });
@@ -107,7 +107,7 @@ describe("Linquish", function () {
                 }, n);
             }, 60)
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
+                expect(result, 'Should be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
                 done();
             });
         });
@@ -185,7 +185,7 @@ describe("Linquish", function () {
                 }, n);
             }, 60)
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
+                expect(result, 'Should be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
                 done();
             });
         });
@@ -199,7 +199,7 @@ describe("Linquish", function () {
                 done(primes);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43]').to.deep.equal([1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43]);
+                expect(result, 'Should be equal to [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43]').to.deep.equal([1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43]);
                 done();
             });
         });
@@ -233,7 +233,7 @@ describe("Linquish", function () {
                 done(findNextPrimeNumber(prime));
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [2, 3, 5, 7, 11]').to.deep.equal([2, 3, 5, 7, 11]);
+                expect(result, 'Should be equal to [2, 3, 5, 7, 11]').to.deep.equal([2, 3, 5, 7, 11]);
                 done();
             });
         });
@@ -252,7 +252,7 @@ describe("Linquish", function () {
                 done(primes);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [1, 2, 2, 3, 3, 5, 5, 7, 7, 11]').to.deep.equal([1, 2, 2, 3, 3, 5, 5, 7, 7, 11]);
+                expect(result, 'Should be equal to [1, 2, 2, 3, 3, 5, 5, 7, 7, 11]').to.deep.equal([1, 2, 2, 3, 3, 5, 5, 7, 7, 11]);
                 done();
             });
         });
@@ -270,7 +270,7 @@ describe("Linquish", function () {
                 done(findNextPrimeNumber(prime));
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [7, 11, 13]').to.deep.equal([7, 11, 13]);
+                expect(result, 'Should be equal to [7, 11, 13]').to.deep.equal([7, 11, 13]);
                 done();
             });
         });
@@ -303,7 +303,7 @@ describe("Linquish", function () {
                 done(n.toString().indexOf('7') != -1);
             })
                 .run(function (result) {
-                expect(result, 'Shoud be equal to [127, 227]').to.deep.equal([127, 227]);
+                expect(result, 'Should be equal to [127, 227]').to.deep.equal([127, 227]);
                 done();
             });
         });
