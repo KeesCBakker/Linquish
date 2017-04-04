@@ -300,7 +300,7 @@ describe("Linquish", function () {
 
                 }, 35)
                 .run((result) => {
-                    expect(result, 'Shoud not be equal to [1, 1, 1, 2, 4, 8, 3, 9, 27]').to.deep.equal([1, 1, 1, 2, 4, 8, 3, 9, 27]);
+                    expect(result, 'Should be equal to [1, 1, 1, 2, 4, 8, 3, 9, 27]').to.deep.equal([1, 1, 1, 2, 4, 8, 3, 9, 27]);
                     done();
                 });
         });

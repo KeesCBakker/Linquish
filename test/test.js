@@ -98,7 +98,7 @@ describe("Linquish", function () {
                 done();
             });
         });
-        it('where timeout', function (done) {
+        it('select timeout', function (done) {
             var ints = [2, 10, 50, 100, 200];
             linquish(ints)
                 .where(function (n, output) {
@@ -216,7 +216,7 @@ describe("Linquish", function () {
                 }, n * 10);
             }, 35)
                 .run(function (result) {
-                expect(result, 'Shoud not be equal to [1, 1, 1, 2, 4, 8, 3, 9, 27]').to.deep.equal([1, 1, 1, 2, 4, 8, 3, 9, 27]);
+                expect(result, 'Should be equal to [1, 1, 1, 2, 4, 8, 3, 9, 27]').to.deep.equal([1, 1, 1, 2, 4, 8, 3, 9, 27]);
                 done();
             });
         });
