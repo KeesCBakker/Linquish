@@ -308,15 +308,6 @@ var WaitAction = (function (_super) {
     };
     return WaitAction;
 }(Action));
-var CutAction = (function (_super) {
-    __extends(CutAction, _super);
-    function CutAction() {
-        return _super.call(this) || this;
-    }
-    CutAction.prototype.run = function (section) {
-    };
-    return CutAction;
-}(Action));
 var exp = function (input) {
     return new Linquish(input);
 };

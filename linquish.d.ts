@@ -30,12 +30,6 @@ export interface SelectReturnManyCallbackType<T> {
 export interface SelectManyCallbackType<T, R> {
     (input: T, ready: SelectReturnManyCallbackType<R>): void;
 }
-export interface DelayReturnCallback<T> {
-    (delay: number): any;
-}
-export interface DelayCallbackType<T> {
-    (input: T, ready: DelayReturnCallback<T>): any;
-}
 export interface RunCallbackType<T> {
     (result: Array<T>): void;
 }
