@@ -65,7 +65,7 @@ var Sub = (function (_super) {
     function Sub(actions, items, startAction) {
         var _this = _super.call(this) || this;
         _this.actions = new Array();
-        _this.array = new Array();
+        _this.sections = new Array();
         _this.isFinished = false;
         actions.forEach(function (a) { return _this.actions.push(a); });
         items.forEach(function (item) {
@@ -77,26 +77,26 @@ var Sub = (function (_super) {
             section.onStateChange.sub(function (state) {
                 _this.signalWait();
             });
-            _this.array.push(section);
+            _this.sections.push(section);
         });
         return _this;
     }
     Sub.prototype.signalWait = function () {
-        var allFinished = this.array.every(function (a) { return Sub.IsFinishedState(a.state); });
+        var allFinished = this.sections.every(function (a) { return Sub.IsFinishedState(a.state); });
         if (allFinished) {
             this.signalFinished();
             return;
         }
-        var allWait = this.array.every(function (a) { return Sub.IsWaitingState(a.state); });
+        var allWait = this.sections.every(function (a) { return Sub.IsWaitingState(a.state); });
         if (allWait) {
-            this.array.forEach(function (a) { return a.run(); });
+            this.sections.forEach(function (a) { return a.run(); });
         }
     };
     Sub.prototype.signalFinished = function () {
         if (this.isFinished) {
             return;
         }
-        var allFinished = this.array.every(function (a) { return Sub.IsFinishedState(a.state); });
+        var allFinished = this.sections.every(function (a) { return Sub.IsFinishedState(a.state); });
         if (!allFinished) {
             return;
         }
@@ -108,12 +108,12 @@ var Sub = (function (_super) {
     };
     Sub.prototype.get = function () {
         var result = new Array();
-        this.array.forEach(function (a) { return a.get().forEach(function (b) { return result.push(b); }); });
+        this.sections.forEach(function (a) { return a.get().forEach(function (b) { return result.push(b); }); });
         return result;
     };
     Sub.prototype.run = function (callback) {
         this.callback = callback;
-        this.array.forEach(function (a) { return a.run(); });
+        this.sections.forEach(function (a) { return a.run(); });
     };
     Sub.IsFinishedState = function (type) {
         return type == StateType.Error || type == StateType.Finished || type == StateType.Skip || type == StateType.Timeout;
@@ -183,8 +183,7 @@ var Section = (function () {
     return Section;
 }());
 var Action = (function () {
-    function Action(name) {
-        this.name = name;
+    function Action() {
     }
     Action.prototype.execute = function (section) {
         try {
@@ -215,7 +214,7 @@ var Action = (function () {
 var SelectAction = (function (_super) {
     __extends(SelectAction, _super);
     function SelectAction(callback, timeout) {
-        var _this = _super.call(this, 'select') || this;
+        var _this = _super.call(this) || this;
         _this.callback = callback;
         _this.timeout = timeout;
         return _this;
@@ -234,7 +233,7 @@ var SelectAction = (function (_super) {
 var WhereAction = (function (_super) {
     __extends(WhereAction, _super);
     function WhereAction(callback, timeout) {
-        var _this = _super.call(this, 'where') || this;
+        var _this = _super.call(this) || this;
         _this.callback = callback;
         _this.timeout = timeout;
         return _this;
@@ -257,7 +256,7 @@ var WhereAction = (function (_super) {
 var ForEachAction = (function (_super) {
     __extends(ForEachAction, _super);
     function ForEachAction(callback, timeout) {
-        var _this = _super.call(this, 'each') || this;
+        var _this = _super.call(this) || this;
         _this.callback = callback;
         _this.timeout = timeout;
         return _this;
@@ -275,7 +274,7 @@ var ForEachAction = (function (_super) {
 var SelectManyAction = (function (_super) {
     __extends(SelectManyAction, _super);
     function SelectManyAction(callback, timeout) {
-        var _this = _super.call(this, 'selectMany') || this;
+        var _this = _super.call(this) || this;
         _this.callback = callback;
         _this.timeout = timeout;
         return _this;
@@ -302,14 +301,24 @@ var SelectManyAction = (function (_super) {
 var WaitAction = (function (_super) {
     __extends(WaitAction, _super);
     function WaitAction() {
-        return _super.call(this, 'wait') || this;
+        return _super.call(this) || this;
     }
     WaitAction.prototype.run = function (section) {
         section.setState(StateType.Wait);
     };
     return WaitAction;
 }(Action));
+var CutAction = (function (_super) {
+    __extends(CutAction, _super);
+    function CutAction() {
+        return _super.call(this) || this;
+    }
+    CutAction.prototype.run = function (section) {
+    };
+    return CutAction;
+}(Action));
 var exp = function (input) {
     return new Linquish(input);
 };
 module.exports = exp;
+module.exports.Linquish = Linquish;

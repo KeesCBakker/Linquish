@@ -7,7 +7,7 @@ export declare class Linquish<T> {
     forEach(callback: ForEachCallbackType<T>, timeout?: number): Linquish<T>;
     selectMany<R>(callback: SelectManyCallbackType<T, R>, timeout?: number): Linquish<R>;
     wait(): Linquish<T>;
-    run(callback?: RunCallback<T>): void;
+    run(callback?: RunCallbackType<T>): void;
 }
 export interface SelectReturnCallbackType<T> {
     (returnObject: T): void;
@@ -30,7 +30,13 @@ export interface SelectReturnManyCallbackType<T> {
 export interface SelectManyCallbackType<T, R> {
     (input: T, ready: SelectReturnManyCallbackType<R>): void;
 }
-export interface RunCallback<T> {
+export interface DelayReturnCallback<T> {
+    (delay: number): any;
+}
+export interface DelayCallbackType<T> {
+    (input: T, ready: DelayReturnCallback<T>): any;
+}
+export interface RunCallbackType<T> {
     (result: Array<T>): void;
 }
 export interface ILinquishStatic {

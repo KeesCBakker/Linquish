@@ -9,7 +9,7 @@ if (typeof (module) === 'undefined') {
         w.exports = w.exports || w.module.exports || {};
         w.require = w.require || function (src) {
             return w[src] || w.exports;
-        } 
+        }
     }(window || {}));
 }
 
@@ -52,7 +52,7 @@ export class Linquish<T> {
         return this;
     }
 
-    public run(callback?: RunCallback<T>): void {
+    public run(callback?: RunCallbackType<T>): void {
 
         var sub = new Sub(this._actions, this._array);
         sub.run(callback);
@@ -73,8 +73,8 @@ abstract class BaseSub {
 class Sub<T> extends BaseSub {
 
     public actions = new Array<Action>();
-    public array = new Array<Section>();
-    private callback: RunCallback<T>;
+    public sections = new Array<Section>();
+    private callback: RunCallbackType<T>;
     private isFinished = false;
 
     constructor(actions: Array<Action>, items: Array<T>, startAction?: number) {
@@ -95,21 +95,21 @@ class Sub<T> extends BaseSub {
 
             });
 
-            this.array.push(section);
+            this.sections.push(section);
         });
     }
 
     public signalWait(): void {
 
-        var allFinished = this.array.every(a => Sub.IsFinishedState(a.state));
+        var allFinished = this.sections.every(a => Sub.IsFinishedState(a.state));
         if (allFinished) {
             this.signalFinished();
             return;
         }
 
-        var allWait = this.array.every(a => Sub.IsWaitingState(a.state));
+        var allWait = this.sections.every(a => Sub.IsWaitingState(a.state));
         if (allWait) {
-            this.array.forEach(a => a.run());
+            this.sections.forEach(a => a.run());
         }
     }
 
@@ -119,7 +119,7 @@ class Sub<T> extends BaseSub {
             return;
         }
 
-        var allFinished = this.array.every(a => Sub.IsFinishedState(a.state));
+        var allFinished = this.sections.every(a => Sub.IsFinishedState(a.state));
         if (!allFinished) {
             return;
         }
@@ -135,15 +135,15 @@ class Sub<T> extends BaseSub {
     public get(): Array<T> {
 
         var result = new Array<T>();
-        this.array.forEach(a => a.get().forEach(b => result.push(b)));
+        this.sections.forEach(a => a.get().forEach(b => result.push(b)));
         return result;
 
     }
 
-    public run(callback?: RunCallback<T>): void {
+    public run(callback?: RunCallbackType<T>): void {
 
         this.callback = callback;
-        this.array.forEach(a => a.run());
+        this.sections.forEach(a => a.run());
     }
 
     public static IsFinishedState(type: StateType) {
@@ -225,7 +225,7 @@ class Section {
 
 abstract class Action {
 
-    constructor(public name: string) { }
+    constructor() { }
 
     public execute(section: Section): void {
         try {
@@ -261,8 +261,8 @@ abstract class Action {
 
 class SelectAction<T, R> extends Action {
 
-    constructor(public callback: SelectCallbackType<T, R>, public timeout?: number) {
-        super('select');
+    constructor(private callback: SelectCallbackType<T, R>, private timeout?: number) {
+        super();
     }
 
     protected run(section: Section): void {
@@ -282,8 +282,8 @@ class SelectAction<T, R> extends Action {
 
 class WhereAction<T> extends Action {
 
-    constructor(public callback: WhereCallbackType<T>, public timeout?: number) {
-        super('where');
+    constructor(private callback: WhereCallbackType<T>, private timeout?: number) {
+        super();
     }
 
     protected run(section: Section): void {
@@ -308,8 +308,8 @@ class WhereAction<T> extends Action {
 
 class ForEachAction<T> extends Action {
 
-    constructor(public callback: ForEachCallbackType<T>, public timeout?: number) {
-        super('each');
+    constructor(private callback: ForEachCallbackType<T>, private timeout?: number) {
+        super();
     }
 
     protected run(section: Section): void {
@@ -328,8 +328,8 @@ class ForEachAction<T> extends Action {
 
 class SelectManyAction<T, R> extends Action {
 
-    constructor(public callback: SelectManyCallbackType<T, R>, public timeout?: number) {
-        super('selectMany');
+    constructor(private callback: SelectManyCallbackType<T, R>, private timeout?: number) {
+        super();
     }
 
     protected run(section: Section): void {
@@ -361,7 +361,7 @@ class SelectManyAction<T, R> extends Action {
 class WaitAction extends Action {
 
     constructor() {
-        super('wait');
+        super();
     }
 
     protected run(section: Section): void {
@@ -397,7 +397,7 @@ export interface SelectManyCallbackType<T, R> {
     (input: T, ready: SelectReturnManyCallbackType<R>): void
 }
 
-export interface RunCallback<T> {
+export interface RunCallbackType<T> {
     (result: Array<T>): void
 }
 
@@ -410,3 +410,4 @@ let exp: ILinquishStatic = function <T>(input: Array<T>): Linquish<T> {
 }
 
 module.exports = exp;
+module.exports.Linquish = Linquish; 
