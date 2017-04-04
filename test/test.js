@@ -27,7 +27,8 @@ describe("Linquish", function () {
                 result.push(n);
                 ready();
             })
-                .run(function () {
+                .run(function (outputs) {
+                expect(outputs, 'Should be equal to [1, 2, 4, 8, 16]').to.deep.equal([1, 2, 4, 8, 16]);
                 expect(result, 'Should contain 1').to.contain(1);
                 expect(result, 'Should contain 2').to.contain(2);
                 expect(result, 'Should contain 4').to.contain(4);
@@ -97,22 +98,16 @@ describe("Linquish", function () {
                 done();
             });
         });
-        it("async each", function (done) {
-            var ints = [1, 2, 4, 8, 16];
-            var result = [];
+        it('where timeout', function (done) {
+            var ints = [2, 10, 50, 100, 200];
             linquish(ints)
-                .forEach(function (n, ready) {
+                .where(function (n, output) {
                 setTimeout(function () {
-                    result.push(n);
-                    ready();
-                }, 16 - n);
-            })
-                .run(function () {
-                expect(result, 'Should contain 1').to.contain(1);
-                expect(result, 'Should contain 2').to.contain(2);
-                expect(result, 'Should contain 4').to.contain(4);
-                expect(result, 'Should contain 8').to.contain(8);
-                expect(result, 'Should contain 16').to.contain(16);
+                    output(true);
+                }, n);
+            }, 60)
+                .run(function (result) {
+                expect(result, 'Shoud be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
                 done();
             });
         });
@@ -181,7 +176,7 @@ describe("Linquish", function () {
                 done();
             });
         });
-        it('select timeout', function (done) {
+        it('select with timeout', function (done) {
             var ints = [2, 10, 50, 100, 200];
             linquish(ints)
                 .select(function (n, output) {
@@ -205,6 +200,23 @@ describe("Linquish", function () {
             })
                 .run(function (result) {
                 expect(result, 'Shoud be equal to [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43]').to.deep.equal([1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43]);
+                done();
+            });
+        });
+        it("select many with timeout - within 35 ms, select (x, x^2, x^3) with timeout of x*10.", function (done) {
+            var ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+            linquish(ints)
+                .selectMany(function (n, done) {
+                window.setTimeout(function () {
+                    var array = [];
+                    array.push(n);
+                    array.push(n * n);
+                    array.push(n * n * n);
+                    done(array);
+                }, n * 10);
+            }, 35)
+                .run(function (result) {
+                expect(result, 'Shoud not be equal to [1, 1, 1, 2, 4, 8, 3, 9, 27]').to.deep.equal([1, 1, 1, 2, 4, 8, 3, 9, 27]);
                 done();
             });
         });
@@ -340,6 +352,5 @@ function getGreekAlphaBet() {
         'nu', 'xi', 'omicron',
         'pi', 'rho', 'sigma',
         'tau', 'upsilon', 'phi',
-        'chi', 'psi', 'omega'
-    ];
+        'chi', 'psi', 'omega'];
 }
