@@ -288,7 +288,7 @@ describe("Linquish", function () {
             linquish<number>(ints)
                 .selectMany<number>((n, select) => {
 
-                    window.setTimeout(() => {
+                    setTimeout(() => {
 
                         var array = [];
                         array.push(n);

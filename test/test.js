@@ -207,7 +207,7 @@ describe("Linquish", function () {
             var ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
             linquish(ints)
                 .selectMany(function (n, select) {
-                window.setTimeout(function () {
+                setTimeout(function () {
                     var array = [];
                     array.push(n);
                     array.push(n * n);
