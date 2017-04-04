@@ -286,7 +286,7 @@ describe("Linquish", function () {
             var ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
             linquish<number>(ints)
-                .selectMany<number>((n, done) => {
+                .selectMany<number>((n, select) => {
 
                     window.setTimeout(() => {
 
@@ -294,7 +294,7 @@ describe("Linquish", function () {
                         array.push(n);
                         array.push(n * n);
                         array.push(n * n * n);
-                        done(array);
+                        select(array);
 
                     }, n * 10);
 

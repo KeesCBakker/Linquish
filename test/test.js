@@ -206,13 +206,13 @@ describe("Linquish", function () {
         it("select many with timeout - within 35 ms, select (x, x^2, x^3) with timeout of x*10.", function (done) {
             var ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
             linquish(ints)
-                .selectMany(function (n, done) {
+                .selectMany(function (n, select) {
                 window.setTimeout(function () {
                     var array = [];
                     array.push(n);
                     array.push(n * n);
                     array.push(n * n * n);
-                    done(array);
+                    select(array);
                 }, n * 10);
             }, 35)
                 .run(function (result) {
