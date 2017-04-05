@@ -65,6 +65,16 @@ var Linquish = (function () {
         }
         return this;
     };
+    Linquish.prototype.gate = function (slots, spanInMs) {
+        if (this._actions.length > 0) {
+            var a = this._actions[this._actions.length - 1];
+            if (a instanceof TimeoutAction) {
+                a.slots = slots;
+                a.spanInMs = spanInMs;
+            }
+        }
+        return this;
+    };
     return Linquish;
 }());
 exports.Linquish = Linquish;
@@ -166,6 +176,9 @@ var Section = (function () {
     });
     Section.prototype.run = function () {
         var _this = this;
+        if (Sub.IsFinishedState(this.state)) {
+            return;
+        }
         if (this.state == StateType.Wait) {
             this.state = StateType.Running;
         }
@@ -173,11 +186,13 @@ var Section = (function () {
             this.setState(StateType.Finished);
             return;
         }
-        setTimeout(function () {
-            var action = _this.owner.actions[_this.nr];
-            _this.nr = _this.nr + 1;
-            action.execute(_this);
-        }, 1);
+        if (!(this.item instanceof BaseSub)) {
+            setTimeout(function () {
+                var action = _this.owner.actions[_this.nr];
+                _this.nr = _this.nr + 1;
+                action.execute(_this);
+            }, 1);
+        }
     };
     Section.prototype.get = function () {
         var array = new Array();
@@ -233,6 +248,29 @@ var TimeoutAction = (function (_super) {
     };
     return TimeoutAction;
 }(Action));
+var GateAction = (function (_super) {
+    __extends(GateAction, _super);
+    function GateAction() {
+        return _super.call(this) || this;
+    }
+    GateAction.prototype.run = function (section) {
+        var _this = this;
+        if (this.gator == null) {
+            this.gator = new Gator(this.slots, this.spanInMs);
+        }
+        this.gator.schedule(function (ready) {
+            _this.workOnItem(section, ready);
+        });
+    };
+    GateAction.prototype.workOnItem = function (section, ready) {
+        var t = this.createTimeout(section);
+        this.work(section, t, function () {
+            ready();
+            section.run();
+        });
+    };
+    return GateAction;
+}(TimeoutAction));
 var SelectAction = (function (_super) {
     __extends(SelectAction, _super);
     function SelectAction(callback) {
@@ -240,17 +278,16 @@ var SelectAction = (function (_super) {
         _this.callback = callback;
         return _this;
     }
-    SelectAction.prototype.run = function (section) {
-        var t = this.createTimeout(section);
+    SelectAction.prototype.work = function (section, timeout, ready) {
         this.callback(section.item, function (output) {
-            TimeoutAction.conditionalExecute(t, section, function () {
+            TimeoutAction.conditionalExecute(timeout, section, function () {
                 section.item = output;
-                section.run();
+                ready();
             });
         });
     };
     return SelectAction;
-}(TimeoutAction));
+}(GateAction));
 var WhereAction = (function (_super) {
     __extends(WhereAction, _super);
     function WhereAction(callback) {
@@ -258,21 +295,18 @@ var WhereAction = (function (_super) {
         _this.callback = callback;
         return _this;
     }
-    WhereAction.prototype.run = function (section) {
-        var t = this.createTimeout(section);
+    WhereAction.prototype.work = function (section, timeout, ready) {
         this.callback(section.item, function (include) {
-            TimeoutAction.conditionalExecute(t, section, function () {
+            TimeoutAction.conditionalExecute(timeout, section, function () {
                 if (!include) {
                     section.setState(StateType.Skip);
                 }
-                else {
-                    section.run();
-                }
+                ready();
             });
         });
     };
     return WhereAction;
-}(TimeoutAction));
+}(GateAction));
 var ForEachAction = (function (_super) {
     __extends(ForEachAction, _super);
     function ForEachAction(callback) {
@@ -280,16 +314,15 @@ var ForEachAction = (function (_super) {
         _this.callback = callback;
         return _this;
     }
-    ForEachAction.prototype.run = function (section) {
-        var t = this.createTimeout(section);
+    ForEachAction.prototype.work = function (section, timeout, ready) {
         this.callback(section.item, function () {
-            TimeoutAction.conditionalExecute(t, section, function () {
-                section.run();
+            TimeoutAction.conditionalExecute(timeout, section, function () {
+                ready();
             });
         });
     };
     return ForEachAction;
-}(TimeoutAction));
+}(GateAction));
 var SelectManyAction = (function (_super) {
     __extends(SelectManyAction, _super);
     function SelectManyAction(callback) {
@@ -297,12 +330,12 @@ var SelectManyAction = (function (_super) {
         _this.callback = callback;
         return _this;
     }
-    SelectManyAction.prototype.run = function (section) {
-        var t = this.createTimeout(section);
+    SelectManyAction.prototype.work = function (section, timeout, ready) {
         this.callback(section.item, function (output) {
-            TimeoutAction.conditionalExecute(t, section, function () {
+            TimeoutAction.conditionalExecute(timeout, section, function () {
                 if (output == null || output.length == 0) {
                     section.setState(StateType.Skip);
+                    ready();
                 }
                 else {
                     var sub = new Sub(section.owner.actions, output, section.nr);
@@ -310,12 +343,13 @@ var SelectManyAction = (function (_super) {
                     sub.run(function () {
                         section.setState(StateType.Finished);
                     });
+                    ready();
                 }
             });
         });
     };
     return SelectManyAction;
-}(TimeoutAction));
+}(GateAction));
 var WaitAction = (function (_super) {
     __extends(WaitAction, _super);
     function WaitAction() {
@@ -329,5 +363,67 @@ var WaitAction = (function (_super) {
 var exp = function (input) {
     return new Linquish(input);
 };
+var Gator = (function () {
+    function Gator(slots, spanInMs) {
+        this.slots = slots;
+        this.spanInMs = spanInMs;
+        this.isRunning = false;
+        this.running = 0;
+        this.ready = 0;
+        this.queue = new Array();
+    }
+    Gator.prototype.schedule = function (action) {
+        if (this.slots == null || this.slots == 0 || this.spanInMs == 0 || this.spanInMs == null) {
+            action(function () { });
+        }
+        else {
+            this.queue.push(action);
+            this.run();
+        }
+    };
+    Gator.prototype.run = function () {
+        var _this = this;
+        console.log('q: ' + this.queue.length);
+        console.log('r: ' + this.running);
+        console.log('s: ' + this.slots);
+        console.table(this.queue);
+        if (this.queue.length == 0) {
+            if (this.isRunning) {
+                clearInterval(this.timer);
+                this.isRunning = false;
+            }
+            return;
+        }
+        if (this.running < this.slots) {
+            var action = void 0;
+            var _loop_1 = function () {
+                action = this_1.queue.shift();
+                var inner = action;
+                if (inner != null) {
+                    this_1.running++;
+                    setTimeout(function () {
+                        inner(function () {
+                            _this.ready++;
+                        });
+                    }, 1);
+                }
+            };
+            var this_1 = this;
+            do {
+                _loop_1();
+            } while (action != null && this.running < this.slots);
+        }
+        if (!this.isRunning) {
+            this.isRunning = true;
+            this.timer = setInterval(function () {
+                _this.running = _this.slots - _this.ready;
+                _this.ready = 0;
+                _this.run();
+            }, this.spanInMs);
+        }
+    };
+    return Gator;
+}());
+exports.Gator = Gator;
 module.exports = exp;
 module.exports.Linquish = Linquish;

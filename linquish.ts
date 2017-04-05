@@ -15,15 +15,21 @@ if (typeof (module) === 'undefined') {
 
 export interface ILinquish<T> {
 
-    select<R>(callback: SelectCallbackType<T, R>): ITimeoutableLinqish<R>;
-    where(callback: WhereCallbackType<T>): ITimeoutableLinqish<T>;
-    forEach(callback: ForEachCallbackType<T>): ITimeoutableLinqish<T>;
-    selectMany<R>(callback: SelectManyCallbackType<T, R>): ITimeoutableLinqish<R>;
+    select<R>(callback: SelectCallbackType<T, R>): IGateableLinquish<R>;
+    where(callback: WhereCallbackType<T>): IGateableLinquish<T>;
+    forEach(callback: ForEachCallbackType<T>): IGateableLinquish<T>;
+    selectMany<R>(callback: SelectManyCallbackType<T, R>): IGateableLinquish<R>;
     wait(): ILinquish<T>;
     run(callback?: RunCallbackType<T>): void;
 }
 
+export interface IGateableLinquish<T> extends ILinquish<T>, ITimeoutableLinqish<T> {
+
+    gate(slots: number, spanInMs: number): ITimeoutableLinqish<T>;
+}
+
 export interface ITimeoutableLinqish<T> extends ILinquish<T> {
+
     timeout(x: number): ILinquish<T>;
 }
 
@@ -31,7 +37,7 @@ export interface ITimeoutableLinqish<T> extends ILinquish<T> {
  * Linquish provides a way of traversing an array in an asynchronous way.
  * Each operation is queued until it is executes by the run function.
  */
-export class Linquish<T> implements ITimeoutableLinqish<T> {
+export class Linquish<T> implements IGateableLinquish<T> {
 
     private _actions = new Array<Action>();
     private _array = new Array<T>();
@@ -40,28 +46,28 @@ export class Linquish<T> implements ITimeoutableLinqish<T> {
         array.forEach(a => this._array.push(a));
     }
 
-    public select<R>(callback: SelectCallbackType<T, R>): ITimeoutableLinqish<R> {
+    public select<R>(callback: SelectCallbackType<T, R>): IGateableLinquish<R> {
         var a = new SelectAction<T, R>(callback);
         this._actions.push(a);
-        return <ITimeoutableLinqish<R>><any>this;
+        return <IGateableLinquish<R>><any>this;
     }
 
-    public where(callback: WhereCallbackType<T>): ITimeoutableLinqish<T> {
+    public where(callback: WhereCallbackType<T>): IGateableLinquish<T> {
         var a = new WhereAction<T>(callback);
         this._actions.push(a);
         return this;
     }
 
-    public forEach(callback: ForEachCallbackType<T>): ITimeoutableLinqish<T> {
+    public forEach(callback: ForEachCallbackType<T>): IGateableLinquish<T> {
         var a = new ForEachAction<T>(callback);
         this._actions.push(a);
         return this;
     }
 
-    public selectMany<R>(callback: SelectManyCallbackType<T, R>): ITimeoutableLinqish<R> {
+    public selectMany<R>(callback: SelectManyCallbackType<T, R>): IGateableLinquish<R> {
         var a = new SelectManyAction<T, R>(callback);
         this._actions.push(a);
-        return <ITimeoutableLinqish<R>><any>this;
+        return <IGateableLinquish<R>><any>this;
     }
 
     public wait(): Linquish<T> {
@@ -81,6 +87,19 @@ export class Linquish<T> implements ITimeoutableLinqish<T> {
             var a = this._actions[this._actions.length - 1];
             if (a instanceof TimeoutAction) {
                 (<TimeoutAction>a).timeout = x;
+            }
+        }
+
+        return this;
+    }
+
+
+    public gate(slots: number, spanInMs: number): ITimeoutableLinqish<T>{
+        if (this._actions.length > 0) {
+            var a = this._actions[this._actions.length - 1];
+            if (a instanceof TimeoutAction) {
+                (<GateAction>a).slots = slots;
+                (<GateAction>a).spanInMs = spanInMs;
             }
         }
 
@@ -214,6 +233,10 @@ class Section {
 
     public run(): void {
 
+        if (Sub.IsFinishedState(this.state)) {
+            return;
+        }
+
         if (this.state == StateType.Wait) {
             this.state = StateType.Running;
         }
@@ -223,13 +246,16 @@ class Section {
             return;
         }
 
-        setTimeout(() => {
+        if (!(this.item instanceof BaseSub)) {
 
-            var action = this.owner.actions[this.nr];
-            this.nr = this.nr + 1;
-            action.execute(this);
+            setTimeout(() => {
 
-        }, 1);
+                var action = this.owner.actions[this.nr];
+                this.nr = this.nr + 1;
+                action.execute(this);
+
+            }, 1);
+        }
     }
 
     public get(): Array<any> {
@@ -287,6 +313,7 @@ abstract class TimeoutAction extends Action {
     }
 
     protected static conditionalExecute(timeoutId: any, section: Section, delegate: () => void): void {
+
         if (timeoutId != null) {
             clearTimeout(timeoutId);
         }
@@ -297,89 +324,114 @@ abstract class TimeoutAction extends Action {
     }
 }
 
-class SelectAction<T, R> extends TimeoutAction {
+abstract class GateAction extends TimeoutAction {
+
+    public slots: number;
+    public spanInMs: number;
+    public gator: Gator;
+
+    constructor() {
+        super();
+    }
+
+    protected run(section: Section): void {
+
+        if (this.gator == null) {
+            this.gator = new Gator(this.slots, this.spanInMs);
+        }
+
+        this.gator.schedule((ready: ICallback) => {
+            this.workOnItem(section, ready);
+        });
+    }
+
+    protected workOnItem(section: Section, ready: ICallback): void {
+
+        var t = this.createTimeout(section);
+
+        this.work(section, t, () => {
+            ready();
+            section.run();
+        });
+    }
+
+    protected abstract work(section: Section, timeout: any, ready: () => void ): void;
+}
+
+class SelectAction<T, R> extends GateAction {
 
     constructor(private callback: SelectCallbackType<T, R>) {
         super();
     }
 
-    protected run(section: Section): void {
-
-        var t = this.createTimeout(section);
+    protected work(section: Section, timeout: any, ready: () => void): void {
 
         this.callback(section.item, (output) => {
 
-            TimeoutAction.conditionalExecute(t, section, () => {
+            TimeoutAction.conditionalExecute(timeout, section, () => {
                 section.item = output;
-                section.run();
+                ready();
             });
 
         });
     }
 }
 
-class WhereAction<T> extends TimeoutAction {
+class WhereAction<T> extends GateAction {
 
     constructor(private callback: WhereCallbackType<T>) {
         super();
     }
 
-    protected run(section: Section): void {
-
-        var t = this.createTimeout(section);
+    protected work(section: Section, timeout: any, ready: () => void): void {
 
         this.callback(section.item, (include) => {
 
-            TimeoutAction.conditionalExecute(t, section, () => {
+            TimeoutAction.conditionalExecute(timeout, section, () => {
 
                 if (!include) {
                     section.setState(StateType.Skip);
                 }
-                else {
-                    section.run();
-                }
+
+                ready();
             });
 
         });
     }
 }
 
-class ForEachAction<T> extends TimeoutAction {
+class ForEachAction<T> extends GateAction {
 
     constructor(private callback: ForEachCallbackType<T>) {
         super();
     }
 
-    protected run(section: Section): void {
-
-        var t = this.createTimeout(section);
+    protected work(section: Section, timeout: any, ready: () => void): void {
 
         this.callback(section.item, () => {
 
-            TimeoutAction.conditionalExecute(t, section, () => {
-
-                section.run()
+            TimeoutAction.conditionalExecute(timeout, section, () => {
+                ready();
             });
         });
     }
 }
 
-class SelectManyAction<T, R> extends TimeoutAction {
+class SelectManyAction<T, R> extends GateAction {
 
     constructor(private callback: SelectManyCallbackType<T, R>) {
         super();
     }
 
-    protected run(section: Section): void {
-
-        var t = this.createTimeout(section);
+    protected work(section: Section, timeout: any, ready: () => void): void {
 
         this.callback(section.item, (output: Array<R>) => {
 
-            TimeoutAction.conditionalExecute(t, section, () => {
+            TimeoutAction.conditionalExecute(timeout, section, () => {
 
                 if (output == null || output.length == 0) {
                     section.setState(StateType.Skip);
+                    ready();
                 }
                 else {
 
@@ -389,6 +441,8 @@ class SelectManyAction<T, R> extends TimeoutAction {
                     sub.run(() => {
                         section.setState(StateType.Finished);
                     });
+
+                    ready();
                 }
             });
 
@@ -447,5 +501,90 @@ let exp: ILinquishStatic = function <T>(input: Array<T>): Linquish<T> {
     return new Linquish<T>(input);
 }
 
+export interface ICallback {
+    (): void;
+}
+
+export interface IGatorAction {
+    (callback: ICallback): void
+}
+
+export class Gator {
+
+    private isRunning = false;
+    private running = 0;
+    private ready = 0;
+    private queue = new Array<IGatorAction>();
+    private timer: any;
+
+    public constructor(private slots: number, private spanInMs: number) { }
+
+    public schedule(action: IGatorAction) {
+
+        if (this.slots == null || this.slots == 0 || this.spanInMs == 0 || this.spanInMs == null) {
+            action(() => { });
+        }
+        else {
+            this.queue.push(action);
+            this.run();
+        }
+    }
+
+    private run() {
+
+        console.log('q: ' + this.queue.length);
+        console.log('r: ' + this.running);
+        console.log('s: ' + this.slots);
+        console.table(this.queue);
+
+        if (this.queue.length == 0) {
+
+            if (this.isRunning) {
+                clearInterval(this.timer);
+                this.isRunning = false;
+            }
+
+            return;
+        }
+
+        if (this.running < this.slots) {
+
+            let action: IGatorAction;
+
+            do {
+                action = this.queue.shift();
+
+                let inner = action;
+
+                if (inner != null) {
+
+                    this.running++;
+
+                    setTimeout(() => {
+                        inner(() => {
+                            this.ready++;
+                        });
+                    }, 1);
+                }
+            }
+            while (action != null && this.running < this.slots);
+        }
+
+        if (!this.isRunning) {
+
+            this.isRunning = true;
+
+            this.timer = setInterval(() => {
+
+                this.running = this.slots - this.ready;
+                this.ready = 0;
+
+                this.run();
+
+            }, this.spanInMs);
+        }
+    }
+}
+
 module.exports = exp;
-module.exports.Linquish = Linquish; 
+module.exports.Linquish = Linquish;
