@@ -417,3 +417,4 @@ var Gator = (function () {
 exports.Gator = Gator;
 module.exports = exp;
 module.exports.Linquish = Linquish;
+module.exports.Gator = Gator;

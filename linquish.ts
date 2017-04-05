@@ -580,3 +580,4 @@ export class Gator {
 
 module.exports = exp;
 module.exports.Linquish = Linquish;
+module.exports.Gator = Gator;
