@@ -415,13 +415,16 @@ describe("Linquish", function () {
         it('Test gator without gating.', function (done) {
             var result = [];
             var gator = new linquish_1.Gator(0, 0);
-            for (var i = 0; i < 5; i++) {
+            var z = 0;
+            for (var i = 0; i < 3; i++) {
                 gator.schedule(function (ready) {
                     result.push(result.length);
+                    z += result.length;
                     ready();
                 });
             }
-            expect(result, 'Should be equal to [0, 1, 2, 3, 4]').to.deep.equal([0, 1, 2, 3, 4]);
+            expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
+            expect(result, 'Should be equal to [0, 1, 2]').to.deep.equal([0, 1, 2]);
             done();
         });
         it("Gate should not be used when there are enough slots. Check if all operation finish in time.", function (done) {
@@ -440,7 +443,7 @@ describe("Linquish", function () {
                 _loop_1(i);
             }
             setTimeout(function () {
-                expect(z, 'Z should be 6 (1+2+3). Make sure everything is execute.').to.be.eq(6);
+                expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
                 expect(diff, 'Should be greater or less than 100.').to.be.lessThan(100);
                 done();
             }, 25);

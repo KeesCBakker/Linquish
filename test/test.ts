@@ -558,15 +558,18 @@ describe("Linquish", function () {
 
             var result = [];
             var gator = new Gator(0, 0);
+            var z = 0;
 
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 3; i++) {
                 gator.schedule((ready) => {
                     result.push(result.length);
+                    z += result.length;
                     ready();
                 });
             }
 
-            expect(result, 'Should be equal to [0, 1, 2, 3, 4]').to.deep.equal([0, 1, 2, 3, 4]);
+            expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
+            expect(result, 'Should be equal to [0, 1, 2]').to.deep.equal([0, 1, 2]);
             done();
 
         });
@@ -591,7 +594,7 @@ describe("Linquish", function () {
             }
 
             setTimeout(() => {
-                expect(z, 'Z should be 6 (1+2+3). Make sure everything is execute.').to.be.eq(6);
+                expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
                 expect(diff, 'Should be greater or less than 100.').to.be.lessThan(100);
                 done();
             }, 25);
