@@ -1,13 +1,29 @@
-export declare class Linquish<T> {
+export interface ILinquish<T> {
+    select<R>(callback: SelectCallbackType<T, R>): ITimeoutableLinqish<R>;
+    where(callback: WhereCallbackType<T>): ITimeoutableLinqish<T>;
+    forEach(callback: ForEachCallbackType<T>): ITimeoutableLinqish<T>;
+    selectMany<R>(callback: SelectManyCallbackType<T, R>): ITimeoutableLinqish<R>;
+    wait(): ILinquish<T>;
+    run(callback?: RunCallbackType<T>): void;
+}
+export interface ITimeoutableLinqish<T> extends ILinquish<T> {
+    timeout(x: number): ILinquish<T>;
+}
+/**
+ * Linquish provides a way of traversing an array in an asynchronous way.
+ * Each operation is queued until it is executes by the run function.
+ */
+export declare class Linquish<T> implements ITimeoutableLinqish<T> {
     private _actions;
     private _array;
     constructor(array: Array<T>);
-    select<R>(callback: SelectCallbackType<T, R>, timeout?: number): Linquish<R>;
-    where(callback: WhereCallbackType<T>, timeout?: number): Linquish<T>;
-    forEach(callback: ForEachCallbackType<T>, timeout?: number): Linquish<T>;
-    selectMany<R>(callback: SelectManyCallbackType<T, R>, timeout?: number): Linquish<R>;
+    select<R>(callback: SelectCallbackType<T, R>): ITimeoutableLinqish<R>;
+    where(callback: WhereCallbackType<T>): ITimeoutableLinqish<T>;
+    forEach(callback: ForEachCallbackType<T>): ITimeoutableLinqish<T>;
+    selectMany<R>(callback: SelectManyCallbackType<T, R>): ITimeoutableLinqish<R>;
     wait(): Linquish<T>;
     run(callback?: RunCallbackType<T>): void;
+    timeout(x: number): ILinquish<T>;
 }
 export interface SelectReturnCallbackType<T> {
     (returnObject: T): void;

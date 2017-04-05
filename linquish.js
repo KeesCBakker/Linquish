@@ -16,6 +16,10 @@ if (typeof (module) === 'undefined') {
         };
     }(window || {}));
 }
+/**
+ * Linquish provides a way of traversing an array in an asynchronous way.
+ * Each operation is queued until it is executes by the run function.
+ */
 var Linquish = (function () {
     function Linquish(array) {
         var _this = this;
@@ -23,23 +27,23 @@ var Linquish = (function () {
         this._array = new Array();
         array.forEach(function (a) { return _this._array.push(a); });
     }
-    Linquish.prototype.select = function (callback, timeout) {
-        var a = new SelectAction(callback, timeout);
+    Linquish.prototype.select = function (callback) {
+        var a = new SelectAction(callback);
         this._actions.push(a);
         return this;
     };
-    Linquish.prototype.where = function (callback, timeout) {
-        var a = new WhereAction(callback, timeout);
+    Linquish.prototype.where = function (callback) {
+        var a = new WhereAction(callback);
         this._actions.push(a);
         return this;
     };
-    Linquish.prototype.forEach = function (callback, timeout) {
-        var a = new ForEachAction(callback, timeout);
+    Linquish.prototype.forEach = function (callback) {
+        var a = new ForEachAction(callback);
         this._actions.push(a);
         return this;
     };
-    Linquish.prototype.selectMany = function (callback, timeout) {
-        var a = new SelectManyAction(callback, timeout);
+    Linquish.prototype.selectMany = function (callback) {
+        var a = new SelectManyAction(callback);
         this._actions.push(a);
         return this;
     };
@@ -51,6 +55,15 @@ var Linquish = (function () {
     Linquish.prototype.run = function (callback) {
         var sub = new Sub(this._actions, this._array);
         sub.run(callback);
+    };
+    Linquish.prototype.timeout = function (x) {
+        if (this._actions.length > 0) {
+            var a = this._actions[this._actions.length - 1];
+            if (a instanceof TimeoutAction) {
+                a.timeout = x;
+            }
+        }
+        return this;
     };
     return Linquish;
 }());
@@ -193,15 +206,24 @@ var Action = (function () {
             section.setState(StateType.Error);
         }
     };
-    Action.createTimeout = function (timeout, section) {
-        if (timeout != null) {
+    return Action;
+}());
+var TimeoutAction = (function (_super) {
+    __extends(TimeoutAction, _super);
+    function TimeoutAction() {
+        var _this = _super.call(this) || this;
+        _this.timeout = 0;
+        return _this;
+    }
+    TimeoutAction.prototype.createTimeout = function (section) {
+        if (this.timeout != null && this.timeout > 0) {
             return setTimeout(function () {
                 section.setState(StateType.Timeout);
-            }, timeout);
+            }, this.timeout);
         }
         return null;
     };
-    Action.conditionalExecute = function (timeoutId, section, delegate) {
+    TimeoutAction.conditionalExecute = function (timeoutId, section, delegate) {
         if (timeoutId != null) {
             clearTimeout(timeoutId);
         }
@@ -209,39 +231,37 @@ var Action = (function () {
             delegate();
         }
     };
-    return Action;
-}());
+    return TimeoutAction;
+}(Action));
 var SelectAction = (function (_super) {
     __extends(SelectAction, _super);
-    function SelectAction(callback, timeout) {
+    function SelectAction(callback) {
         var _this = _super.call(this) || this;
         _this.callback = callback;
-        _this.timeout = timeout;
         return _this;
     }
     SelectAction.prototype.run = function (section) {
-        var t = Action.createTimeout(this.timeout, section);
+        var t = this.createTimeout(section);
         this.callback(section.item, function (output) {
-            Action.conditionalExecute(t, section, function () {
+            TimeoutAction.conditionalExecute(t, section, function () {
                 section.item = output;
                 section.run();
             });
         });
     };
     return SelectAction;
-}(Action));
+}(TimeoutAction));
 var WhereAction = (function (_super) {
     __extends(WhereAction, _super);
-    function WhereAction(callback, timeout) {
+    function WhereAction(callback) {
         var _this = _super.call(this) || this;
         _this.callback = callback;
-        _this.timeout = timeout;
         return _this;
     }
     WhereAction.prototype.run = function (section) {
-        var t = Action.createTimeout(this.timeout, section);
+        var t = this.createTimeout(section);
         this.callback(section.item, function (include) {
-            Action.conditionalExecute(t, section, function () {
+            TimeoutAction.conditionalExecute(t, section, function () {
                 if (!include) {
                     section.setState(StateType.Skip);
                 }
@@ -252,37 +272,35 @@ var WhereAction = (function (_super) {
         });
     };
     return WhereAction;
-}(Action));
+}(TimeoutAction));
 var ForEachAction = (function (_super) {
     __extends(ForEachAction, _super);
-    function ForEachAction(callback, timeout) {
+    function ForEachAction(callback) {
         var _this = _super.call(this) || this;
         _this.callback = callback;
-        _this.timeout = timeout;
         return _this;
     }
     ForEachAction.prototype.run = function (section) {
-        var t = Action.createTimeout(this.timeout, section);
+        var t = this.createTimeout(section);
         this.callback(section.item, function () {
-            Action.conditionalExecute(t, section, function () {
+            TimeoutAction.conditionalExecute(t, section, function () {
                 section.run();
             });
         });
     };
     return ForEachAction;
-}(Action));
+}(TimeoutAction));
 var SelectManyAction = (function (_super) {
     __extends(SelectManyAction, _super);
-    function SelectManyAction(callback, timeout) {
+    function SelectManyAction(callback) {
         var _this = _super.call(this) || this;
         _this.callback = callback;
-        _this.timeout = timeout;
         return _this;
     }
     SelectManyAction.prototype.run = function (section) {
-        var t = Action.createTimeout(this.timeout, section);
+        var t = this.createTimeout(section);
         this.callback(section.item, function (output) {
-            Action.conditionalExecute(t, section, function () {
+            TimeoutAction.conditionalExecute(t, section, function () {
                 if (output == null || output.length == 0) {
                     section.setState(StateType.Skip);
                 }
@@ -297,7 +315,7 @@ var SelectManyAction = (function (_super) {
         });
     };
     return SelectManyAction;
-}(Action));
+}(TimeoutAction));
 var WaitAction = (function (_super) {
     __extends(WaitAction, _super);
     function WaitAction() {

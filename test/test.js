@@ -47,7 +47,7 @@ describe("Linquish", function () {
                     ready();
                 }, 16 - n);
             })
-                .run(function () {
+                .run(function (x) {
                 expect(result, 'Should contain 1').to.contain(1);
                 expect(result, 'Should contain 2').to.contain(2);
                 expect(result, 'Should contain 4').to.contain(4);
@@ -98,16 +98,39 @@ describe("Linquish", function () {
                 done();
             });
         });
-        it('select timeout', function (done) {
+        it('where timeout', function (done) {
             var ints = [2, 10, 50, 100, 200];
             linquish(ints)
                 .where(function (n, output) {
                 setTimeout(function () {
                     output(true);
                 }, n);
-            }, 60)
+            })
+                .timeout(60)
                 .run(function (result) {
                 expect(result, 'Should be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
+                done();
+            });
+        });
+        it('where none', function (done) {
+            var ints = [1, 3, 5, 7, 9];
+            linquish(ints)
+                .where(function (n, ready) {
+                ready(n % 2 == 0);
+            })
+                .run(function (result) {
+                expect(result, 'Should be equal to []').to.deep.equal([]);
+                done();
+            });
+        });
+        it('where not last', function (done) {
+            var ints = [1, 3, 5, 7, 9];
+            linquish(ints)
+                .where(function (n, ready) {
+                ready(n != 9);
+            })
+                .run(function (result) {
+                expect(result, 'Should be equal to [1, 3, 5, 7]').to.deep.equal([1, 3, 5, 7]);
                 done();
             });
         });
@@ -183,7 +206,8 @@ describe("Linquish", function () {
                 setTimeout(function () {
                     output(n);
                 }, n);
-            }, 60)
+            })
+                .timeout(60)
                 .run(function (result) {
                 expect(result, 'Should be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
                 done();
@@ -214,7 +238,8 @@ describe("Linquish", function () {
                     array.push(n * n * n);
                     select(array);
                 }, n * 10);
-            }, 35)
+            })
+                .timeout(35)
                 .run(function (result) {
                 expect(result, 'Should be equal to [1, 1, 1, 2, 4, 8, 3, 9, 27]').to.deep.equal([1, 1, 1, 2, 4, 8, 3, 9, 27]);
                 done();

@@ -13,7 +13,25 @@ if (typeof (module) === 'undefined') {
     }(window || {}));
 }
 
-export class Linquish<T> {
+export interface ILinquish<T> {
+
+    select<R>(callback: SelectCallbackType<T, R>): ITimeoutableLinqish<R>;
+    where(callback: WhereCallbackType<T>): ITimeoutableLinqish<T>;
+    forEach(callback: ForEachCallbackType<T>): ITimeoutableLinqish<T>;
+    selectMany<R>(callback: SelectManyCallbackType<T, R>): ITimeoutableLinqish<R>;
+    wait(): ILinquish<T>;
+    run(callback?: RunCallbackType<T>): void;
+}
+
+export interface ITimeoutableLinqish<T> extends ILinquish<T> {
+    timeout(x: number): ILinquish<T>;
+}
+
+/**
+ * Linquish provides a way of traversing an array in an asynchronous way.
+ * Each operation is queued until it is executes by the run function.
+ */
+export class Linquish<T> implements ITimeoutableLinqish<T> {
 
     private _actions = new Array<Action>();
     private _array = new Array<T>();
@@ -22,28 +40,28 @@ export class Linquish<T> {
         array.forEach(a => this._array.push(a));
     }
 
-    public select<R>(callback: SelectCallbackType<T, R>, timeout?: number): Linquish<R> {
-        var a = new SelectAction<T, R>(callback, timeout);
+    public select<R>(callback: SelectCallbackType<T, R>): ITimeoutableLinqish<R> {
+        var a = new SelectAction<T, R>(callback);
         this._actions.push(a);
-        return <Linquish<R>><any>this;
+        return <ITimeoutableLinqish<R>><any>this;
     }
 
-    public where(callback: WhereCallbackType<T>, timeout?: number): Linquish<T> {
-        var a = new WhereAction<T>(callback, timeout);
+    public where(callback: WhereCallbackType<T>): ITimeoutableLinqish<T> {
+        var a = new WhereAction<T>(callback);
         this._actions.push(a);
         return this;
     }
 
-    public forEach(callback: ForEachCallbackType<T>, timeout?: number): Linquish<T> {
-        var a = new ForEachAction<T>(callback, timeout);
+    public forEach(callback: ForEachCallbackType<T>): ITimeoutableLinqish<T> {
+        var a = new ForEachAction<T>(callback);
         this._actions.push(a);
         return this;
     }
 
-    public selectMany<R>(callback: SelectManyCallbackType<T, R>, timeout?: number): Linquish<R> {
-        var a = new SelectManyAction<T, R>(callback, timeout);
+    public selectMany<R>(callback: SelectManyCallbackType<T, R>): ITimeoutableLinqish<R> {
+        var a = new SelectManyAction<T, R>(callback);
         this._actions.push(a);
-        return <Linquish<R>><any>this;
+        return <ITimeoutableLinqish<R>><any>this;
     }
 
     public wait(): Linquish<T> {
@@ -56,6 +74,17 @@ export class Linquish<T> {
 
         var sub = new Sub(this._actions, this._array);
         sub.run(callback);
+    }
+
+    public timeout(x: number): ILinquish<T> {
+        if (this._actions.length > 0) {
+            var a = this._actions[this._actions.length - 1];
+            if (a instanceof TimeoutAction) {
+                (<TimeoutAction>a).timeout = x;
+            }
+        }
+
+        return this;
     }
 }
 
@@ -237,12 +266,21 @@ abstract class Action {
     }
 
     protected abstract run(section: Section): void;
+}
 
-    protected static createTimeout(timeout: number, section: Section): any {
-        if (timeout != null) {
+abstract class TimeoutAction extends Action {
+
+    public timeout = 0;
+
+    constructor() {
+        super();
+    }
+
+    protected createTimeout(section: Section): any {
+        if (this.timeout != null && this.timeout > 0) {
             return setTimeout(() => {
                 section.setState(StateType.Timeout);
-            }, timeout);
+            }, this.timeout);
         }
 
         return null;
@@ -259,19 +297,19 @@ abstract class Action {
     }
 }
 
-class SelectAction<T, R> extends Action {
+class SelectAction<T, R> extends TimeoutAction {
 
-    constructor(private callback: SelectCallbackType<T, R>, private timeout?: number) {
+    constructor(private callback: SelectCallbackType<T, R>) {
         super();
     }
 
     protected run(section: Section): void {
 
-        var t = Action.createTimeout(this.timeout, section);
+        var t = this.createTimeout(section);
 
         this.callback(section.item, (output) => {
 
-            Action.conditionalExecute(t, section, () => {
+            TimeoutAction.conditionalExecute(t, section, () => {
                 section.item = output;
                 section.run();
             });
@@ -280,19 +318,19 @@ class SelectAction<T, R> extends Action {
     }
 }
 
-class WhereAction<T> extends Action {
+class WhereAction<T> extends TimeoutAction {
 
-    constructor(private callback: WhereCallbackType<T>, private timeout?: number) {
+    constructor(private callback: WhereCallbackType<T>) {
         super();
     }
 
     protected run(section: Section): void {
 
-        var t = Action.createTimeout(this.timeout, section);
+        var t = this.createTimeout(section);
 
         this.callback(section.item, (include) => {
 
-            Action.conditionalExecute(t, section, () => {
+            TimeoutAction.conditionalExecute(t, section, () => {
 
                 if (!include) {
                     section.setState(StateType.Skip);
@@ -306,19 +344,19 @@ class WhereAction<T> extends Action {
     }
 }
 
-class ForEachAction<T> extends Action {
+class ForEachAction<T> extends TimeoutAction {
 
-    constructor(private callback: ForEachCallbackType<T>, private timeout?: number) {
+    constructor(private callback: ForEachCallbackType<T>) {
         super();
     }
 
     protected run(section: Section): void {
 
-        var t = Action.createTimeout(this.timeout, section);
+        var t = this.createTimeout(section);
 
         this.callback(section.item, () => {
 
-            Action.conditionalExecute(t, section, () => {
+            TimeoutAction.conditionalExecute(t, section, () => {
 
                 section.run()
             });
@@ -326,19 +364,19 @@ class ForEachAction<T> extends Action {
     }
 }
 
-class SelectManyAction<T, R> extends Action {
+class SelectManyAction<T, R> extends TimeoutAction {
 
-    constructor(private callback: SelectManyCallbackType<T, R>, private timeout?: number) {
+    constructor(private callback: SelectManyCallbackType<T, R>) {
         super();
     }
 
     protected run(section: Section): void {
 
-        var t = Action.createTimeout(this.timeout, section);
+        var t = this.createTimeout(section);
 
         this.callback(section.item, (output: Array<R>) => {
 
-            Action.conditionalExecute(t, section, () => {
+            TimeoutAction.conditionalExecute(t, section, () => {
 
                 if (output == null || output.length == 0) {
                     section.setState(StateType.Skip);
