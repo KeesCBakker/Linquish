@@ -1,20 +1,27 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Linquish Tests</title>
-  <link rel="stylesheet" media="all" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/3.0.0/mocha.css">
+    <meta charset="utf-8" />
+    <title>Linquish Tests</title>
+    <link rel="stylesheet" media="all" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/3.0.0/mocha.css">
 </head>
 <body>
-  <div id="mocha"><p><a href="./test.html">Tests</a></p></div>
-  <div id="messages"></div>
-  <div id="fixtures"></div>`
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/3.0.0/mocha.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/3.5.0/chai.min.js"></script>
-  <script src="../node_modules/strongly-typed-events/strongly-typed-events.js"></script>
-  <script src="../linquish.js"></script>
-  <script>mocha.setup('bdd')</script>
-  <script src="test.js"></script>
-  <script>mocha.run();</script>
+    <div id="mocha">
+        <p><a href="./test.html">Linquish Tests</a></p>
+        <p>
+           <a href="https://travis-ci.org/KeesCBakker/Linquish" title="Build Status"><img src="https://travis-ci.org/KeesCBakker/Linquish.svg?branch=master" title="Build Status" /></a>
+           <a href="https://david-dm.org/KeesCBakker/Linquish" title="Dependencies Status"><img src="https://david-dm.org/KeesCBakker/Linquish/status.svg" title="Dependencies Status" /></a>
+        </p>
+    </div>
+
+    <div id="messages"></div>
+    <div id="fixtures"></div>`
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/3.0.0/mocha.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/3.5.0/chai.min.js"></script>
+    <script src="../node_modules/strongly-typed-events/strongly-typed-events.js"></script>
+    <script src="../linquish.js"></script>
+    <script>mocha.setup('bdd')</script>
+    <script src="test.js"></script>
+    <script>mocha.run();</script>
 </body>
 </html>

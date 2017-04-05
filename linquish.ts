@@ -532,11 +532,6 @@ export class Gator {
 
     private run() {
 
-        console.log('q: ' + this.queue.length);
-        console.log('r: ' + this.running);
-        console.log('s: ' + this.slots);
-        console.table(this.queue);
-
         if (this.queue.length == 0) {
 
             if (this.isRunning) {
@@ -559,12 +554,9 @@ export class Gator {
                 if (inner != null) {
 
                     this.running++;
-
-                    setTimeout(() => {
-                        inner(() => {
-                            this.ready++;
-                        });
-                    }, 1);
+                    inner(() => {
+                        this.ready++;
+                    });
                 }
             }
             while (action != null && this.running < this.slots);

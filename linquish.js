@@ -383,10 +383,6 @@ var Gator = (function () {
     };
     Gator.prototype.run = function () {
         var _this = this;
-        console.log('q: ' + this.queue.length);
-        console.log('r: ' + this.running);
-        console.log('s: ' + this.slots);
-        console.table(this.queue);
         if (this.queue.length == 0) {
             if (this.isRunning) {
                 clearInterval(this.timer);
@@ -396,21 +392,15 @@ var Gator = (function () {
         }
         if (this.running < this.slots) {
             var action = void 0;
-            var _loop_1 = function () {
-                action = this_1.queue.shift();
+            do {
+                action = this.queue.shift();
                 var inner = action;
                 if (inner != null) {
-                    this_1.running++;
-                    setTimeout(function () {
-                        inner(function () {
-                            _this.ready++;
-                        });
-                    }, 1);
+                    this.running++;
+                    inner(function () {
+                        _this.ready++;
+                    });
                 }
-            };
-            var this_1 = this;
-            do {
-                _loop_1();
             } while (action != null && this.running < this.slots);
         }
         if (!this.isRunning) {
