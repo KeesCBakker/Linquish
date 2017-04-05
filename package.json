@@ -1,6 +1,6 @@
 {
   "name": "linquish",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Add something that feels like async linq queues.",
   "main": "./linquish.js",
   "types": "./linquish.d.ts",
@@ -15,14 +15,9 @@
     "url": "git+https://github.com/KeesCBakker/Linquish.git"
   },
   "keywords": [
-    "events",
-    "event",
-    "sender",
-    "args",
-    "strongly",
-    "typed",
-    "typescript",
-    "signal",
+    "linq",
+    "async",
+    "interator",
     "DotNet"
   ],
   "author": "Kees C. Bakker (https://keestalkstech.com)",
