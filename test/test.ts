@@ -1,16 +1,8 @@
-/// <reference path="../typings/node/node.d.ts" />
-/// <reference path="../typings/mocha/mocha.d.ts" />
-/// <reference path="../typings/chai/chai.d.ts" />
-
 'use strict';
 
-var expect: Chai.ExpectStatic = require('chai').expect;
+import { expect } from 'chai'
 
-import { Linquish, Gator, IGatorAction } from '../linquish';
-
-var linquish = function <T>(input: Array<T>): Linquish<T> {
-    return new Linquish<T>(input);
-}
+import linquish from '../linquish';
 
 describe("Linquish", function () {
 

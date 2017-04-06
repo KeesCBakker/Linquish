@@ -1,18 +1,5 @@
 import { ISimpleEvent, SimpleEventDispatcher } from 'strongly-typed-events';
 
-/* small bridge to web JS */
-if (typeof (module) === 'undefined') {
-    (function (w: any) {
-
-        w.module = w.module || {};
-        w.module.exports = w.module.exports || {};
-        w.exports = w.exports || w.module.exports || {};
-        w.require = w.require || function (src) {
-            return w[src] || w.exports;
-        }
-    }(window || {}));
-}
-
 export interface ILinquish<T> {
 
     select<R>(callback: SelectCallbackType<T, R>): IGateableLinquish<R>;
@@ -92,7 +79,6 @@ export class Linquish<T> implements IGateableLinquish<T> {
 
         return this;
     }
-
 
     public gate(slots: number, spanInMs: number): ITimeoutableLinqish<T>{
         if (this._actions.length > 0) {
@@ -501,6 +487,8 @@ let exp: ILinquishStatic = function <T>(input: Array<T>): Linquish<T> {
     return new Linquish<T>(input);
 }
 
+export default exp;
+
 export interface ICallback {
     (): void;
 }
@@ -577,7 +565,3 @@ export class Gator {
         }
     }
 }
-
-module.exports = exp;
-module.exports.Linquish = Linquish;
-module.exports.Gator = Gator;
