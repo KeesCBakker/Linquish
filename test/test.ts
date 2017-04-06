@@ -3,6 +3,7 @@
 import { expect } from 'chai'
 
 import linquish from '../linquish';
+import { Gator } from '../linquish';
 
 describe("Linquish", function () {
 
