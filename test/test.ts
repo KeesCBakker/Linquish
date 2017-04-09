@@ -6,6 +6,7 @@ import { expect } from 'chai'
 
 describe("Linquish", function () {
 
+
     describe("Run", function () {
 
         it("Run with callback.", function (done) {
@@ -27,6 +28,18 @@ describe("Linquish", function () {
                 .run();
 
             setTimeout(() => done(), 5);
+        });
+
+        it("Run with producer.", function (done) {
+
+            linquish<number>((ready) => {
+                ready([1, 2, 4, 8, 16]);
+            })
+            .run((result) => {
+                expect(result, 'Should be equal to [1, 2, 4, 8, 16]').to.deep.equal([1, 2, 4, 8, 16]);
+                done();
+            });
+
         });
     });
 

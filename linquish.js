@@ -386,7 +386,14 @@ var WaitAction = (function (_super) {
     return WaitAction;
 }(Action));
 var exp = function (input) {
-    return new Linquish(input);
+    if (input instanceof Array) {
+        return new Linquish(input);
+    }
+    return new Linquish([true]).selectMany(function (b, ready) {
+        input(function (output) {
+            ready(output);
+        });
+    });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = exp;

@@ -32,19 +32,22 @@ export interface ConditionCallbackType<T> {
     (input: T): boolean;
 }
 export interface ForEachCallbackType<T> {
-    (input: T, ready: () => void): any;
+    (input: T, ready: () => void): void;
 }
 export interface SelectReturnManyCallbackType<T> {
-    (array: Array<T>): any;
+    (array: Array<T>): void;
 }
 export interface SelectManyCallbackType<T, R> {
     (input: T, ready: SelectReturnManyCallbackType<R>): void;
+}
+export interface DefaultSelectCallbackType<T> {
+    (ready: SelectReturnManyCallbackType<T>): void;
 }
 export interface RunCallbackType<T> {
     (result: Array<T>): void;
 }
 export interface ILinquishStatic {
-    <T>(input: Array<T>): Linquish<T>;
+    <T>(input: Array<T> | DefaultSelectCallbackType<T>): ILinquish<T>;
 }
 declare let exp: ILinquishStatic;
 export default exp;

@@ -491,28 +491,43 @@ export interface ConditionCallbackType<T> {
 }
 
 export interface ForEachCallbackType<T> {
-    (input: T, ready: () => void)
+    (input: T, ready: () => void): void
 }
 
 export interface SelectReturnManyCallbackType<T> {
-    (array: Array<T>)
+    (array: Array<T>): void;
 }
 
 export interface SelectManyCallbackType<T, R> {
     (input: T, ready: SelectReturnManyCallbackType<R>): void
 }
 
+export interface DefaultSelectCallbackType<T> {
+    (ready: SelectReturnManyCallbackType<T>): void
+}
+
+
 export interface RunCallbackType<T> {
     (result: Array<T>): void
 }
 
 export interface ILinquishStatic {
-    <T>(input: Array<T>): Linquish<T>
+    <T>(input: Array<T> | DefaultSelectCallbackType<T>): ILinquish<T>
 }
 
-let exp: ILinquishStatic = function <T>(input: Array<T>): Linquish<T> {
-    return new Linquish<T>(input);
-}
+let exp: ILinquishStatic = function <T>(input: Array<T> | DefaultSelectCallbackType<T>): ILinquish<T> {
+
+    if (input instanceof Array) {
+        return new Linquish<T>(input);
+    }
+
+    return new Linquish([true]).selectMany<T>((b, ready) => {
+        (<DefaultSelectCallbackType<T>>input)((output) => {
+            ready(output
+            );
+        });
+    });
+};
 
 export default exp;
 

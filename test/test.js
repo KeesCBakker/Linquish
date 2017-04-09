@@ -18,6 +18,15 @@ describe("Linquish", function () {
                 .run();
             setTimeout(function () { return done(); }, 5);
         });
+        it("Run with producer.", function (done) {
+            linquish_1.default(function (ready) {
+                ready([1, 2, 4, 8, 16]);
+            })
+                .run(function (result) {
+                chai_1.expect(result, 'Should be equal to [1, 2, 4, 8, 16]').to.deep.equal([1, 2, 4, 8, 16]);
+                done();
+            });
+        });
     });
     describe("Each", function () {
         it("Loop should not change results.", function (done) {
