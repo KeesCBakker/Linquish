@@ -1,4 +1,4 @@
-﻿# Linquish v0.0.4
+﻿# Linquish
 Iterate arrays asynchronously in a LINQ-style fashion using TypeScript.
 
 [![Build Status](https://travis-ci.org/KeesCBakker/Linquish.svg?branch=master)](https://travis-ci.org/KeesCBakker/Linquish)
