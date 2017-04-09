@@ -1,9 +1,8 @@
 'use strict';
 
-import { expect } from 'chai'
-
 import linquish from '../linquish';
 import { Gator } from '../linquish';
+import { expect } from 'chai'
 
 describe("Linquish", function () {
 
@@ -13,7 +12,7 @@ describe("Linquish", function () {
 
             var ints = [1, 2, 4, 8, 16];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .run((outputs) => {
                     expect(outputs, 'Should be equal to [1, 2, 4, 8, 16]').to.deep.equal([1, 2, 4, 8, 16]);
                     done();
@@ -24,7 +23,7 @@ describe("Linquish", function () {
 
             var ints = [1, 2, 4, 8, 16];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .run();
 
             setTimeout(() => done(), 5);
@@ -38,7 +37,7 @@ describe("Linquish", function () {
             var ints = [1, 2, 4, 8, 16];
             var loopResult = [];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .forEach((n, ready) => {
                     loopResult.push(n);
                     ready();
@@ -59,23 +58,23 @@ describe("Linquish", function () {
 
         it("Test async loop using a setTimeout.", function (done) {
 
-            var ints = [1, 2, 4, 8, 16];
+            var ints = [10, 5, 1];
             var loopResult = [];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .forEach((n, ready) => {
                     setTimeout(() => {
                         loopResult.push(n);
                         ready();
-                    }, 16 - n);
+                    }, n);
                 })
-                .run(() => {
+                .run((result) => {
 
-                    expect(loopResult, 'Should contain 1').to.contain(1);
-                    expect(loopResult, 'Should contain 2').to.contain(2);
-                    expect(loopResult, 'Should contain 4').to.contain(4);
-                    expect(loopResult, 'Should contain 8').to.contain(8);
-                    expect(loopResult, 'Should contain 16').to.contain(16);
+                    expect(result, 'Should be equal to [10, 5, 1]').to.deep.equal([10, 5, 1]);
+
+                    expect(loopResult, 'LoopResult should contain 10').to.contain(10);
+                    expect(loopResult, 'LoopResult should contain 5').to.contain(5);
+                    expect(loopResult, 'LoopResult should contain 1').to.contain(1);
 
                     done();
                 });
@@ -83,35 +82,100 @@ describe("Linquish", function () {
 
         it("Test async loop using a setTimeout, with loop timeout.", function (done) {
 
-            var ints = [1, 2, 4, 8, 16];
+            var ints = [10, 5, 1];
             var loopResult = [];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .forEach((n, ready) => {
                     setTimeout(() => {
                         loopResult.push(n);
                         ready();
-                    }, 16 - n);
+
+                        if (n == 10) {
+                            onProcessFinal();
+                        }
+                    }, n);
                 })
-                .timeout(5)
+                .timeout(6)
                 .run((result) => {
-                    expect(result, 'Should be equal to [16]').to.deep.equal([16]);
+                    expect(result, 'Should be equal to [5, 1]').to.deep.equal([5, 1]);
                 });
 
             //validate the foreach has run - functions cannot be cancelled,
             //but the values should be disregarded in the end result.
-            setTimeout(() => {
+            function onProcessFinal(){
 
-                expect(loopResult, 'Should contain 1').to.contain(1);
-                expect(loopResult, 'Should contain 2').to.contain(2);
-                expect(loopResult, 'Should contain 4').to.contain(4);
-                expect(loopResult, 'Should contain 8').to.contain(8);
-                expect(loopResult, 'Should contain 16').to.contain(16);
+                expect(loopResult, 'LoopResult should contain 10').to.contain(10);
+                expect(loopResult, 'LoopResult should contain 5').to.contain(5);
+                expect(loopResult, 'LoopResult should contain 1').to.contain(1);
 
                 done();
-
-            }, 25);
+            };
         });
+
+        it("Test conditional loop.", function (done) {
+
+            var ints = [1, 2, 3, 4, 5];
+            var loopResult = [];
+            var whenExecuted = 0;
+
+            linquish(ints)
+                .forEach((n, ready) => {
+                    loopResult.push(n);
+                    ready();
+                })
+                .when((n) => {
+                    whenExecuted++;
+                    return n % 2 == 0;
+                })
+                .run((result) => {
+
+                    expect(result, 'Should be equal to [1, 2, 3, 4, 5]').to.deep.equal([1, 2, 3, 4, 5]);
+
+                    expect(loopResult, 'Should not contain 1').not.to.contain(1);
+                    expect(loopResult, 'Should contain 2').to.contain(2);
+                    expect(loopResult, 'Should not contain 3').not.to.contain(3);
+                    expect(loopResult, 'Should contain 4').to.contain(4);
+                    expect(loopResult, 'Should not contain 5').not.to.contain(5);
+
+                    expect(whenExecuted, 'When should have been executed 5 times.').eq(5);
+
+                    done();
+                });
+        });
+
+        it("Test double conditional loop.", function (done) {
+
+            var ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+            var loopResult = [];
+            var when1Executed = 0;
+            var when2Executed = 0;
+
+            linquish(ints)
+                .forEach((n, ready) => {
+                    loopResult.push(n);
+                    ready();
+                })
+                .when((n) => {
+                    when1Executed++;
+                    return n > 10;
+                })
+                .when((n) => {
+                    when2Executed++;
+                    return n % 2 == 0;
+                })
+                .run((result) => {
+
+                    expect(result, 'Should be equal to [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]').to.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+                    expect(loopResult, 'Should be equal to [12, 14]').to.deep.equal([12, 14]);
+
+                    expect(when1Executed, 'When should have been executed 14 times.').eq(14);
+                    expect(when2Executed, 'When should have been executed 4 times.').eq(4);
+
+                    done();
+                });
+        });
+
     });
 
     describe("Wait", function () {
@@ -127,7 +191,7 @@ describe("Linquish", function () {
 
             var i = 1;
 
-            linquish<number>(ints)
+            linquish(ints)
                 .select<number>((n, done) => {
                     selectExecuted++;
                     setTimeout(() => {
@@ -160,7 +224,7 @@ describe("Linquish", function () {
 
             var ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .where((n, done) => {
                     done(n % 2 != 0);
                 })
@@ -173,9 +237,9 @@ describe("Linquish", function () {
 
         it('Test async where with setTimeout.', function (done) {
 
-            var ints = [2, 10, 50, 100, 200];
+            var ints = [5, 10, 20, 40];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .where((n, output) => {
 
                     setTimeout(() => {
@@ -183,9 +247,9 @@ describe("Linquish", function () {
                     }, n);
 
                 })
-                .timeout(60)
+                .timeout(25)
                 .run((result) => {
-                    expect(result, 'Should be equal to [2, 10, 50]').to.deep.equal([2, 10, 50]);
+                    expect(result, 'Should be equal to [5, 10, 20]').to.deep.equal([5, 10, 20]);
                     done();
                 });
 
@@ -195,7 +259,7 @@ describe("Linquish", function () {
 
             var ints = [1, 3, 5, 7, 9];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .where((n, ready) => {
                     ready(n % 2 == 0);
                 })
@@ -210,7 +274,7 @@ describe("Linquish", function () {
 
             var ints = [1, 3, 5, 7, 9];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .where((n, ready) => {
                     ready(n == 1);
                 })
@@ -221,13 +285,11 @@ describe("Linquish", function () {
 
         });
 
-
-
         it('Test when first is not selected.', function (done) {
 
             var ints = [1, 3, 5, 7, 9];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .where((n, ready) => {
                     ready(n != 1);
                 })
@@ -242,7 +304,7 @@ describe("Linquish", function () {
 
             var ints = [1, 3, 5, 7, 9];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .where((n, ready) => {
                     ready(n == 9);
                 })
@@ -257,7 +319,7 @@ describe("Linquish", function () {
 
             var ints = [1, 3, 5, 7, 9];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .where((n, ready) => {
                     ready(n != 9);
                 })
@@ -275,7 +337,7 @@ describe("Linquish", function () {
 
             var ints = [1000, 2000, 4000, 8000];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .select<number>((n, ouput) => {
                     var prime = findNextPrimeNumber(n);
                     ouput(prime);
@@ -296,7 +358,7 @@ describe("Linquish", function () {
             var ints = [9, 8, 0];
             var alphabet = getGreekAlphaBet();
 
-            linquish<number>(ints)
+            linquish(ints)
                 .select<string>((n, output) => {
                     var c = alphabet[n];
                     output(c);
@@ -312,7 +374,7 @@ describe("Linquish", function () {
 
             var ints = [2, 10, 50];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .select((n, output) => {
 
                     setTimeout(() => {
@@ -331,7 +393,7 @@ describe("Linquish", function () {
 
             var ints = [2, 10, 50];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .select((n, output) => {
 
                     setTimeout(() => {
@@ -395,7 +457,7 @@ describe("Linquish", function () {
 
             var ints = [45];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .selectMany<number>((n, done) => {
                     var primes = findPrimes(n);
                     done(primes);
@@ -411,7 +473,7 @@ describe("Linquish", function () {
 
             var ints = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .selectMany<number>((n, select) => {
 
                     setTimeout(() => {
@@ -440,7 +502,7 @@ describe("Linquish", function () {
 
             var ints = [10];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .selectMany<number>((n, done) => {
                     var primes = findPrimes(n);
                     done(primes);
@@ -459,7 +521,7 @@ describe("Linquish", function () {
 
             var ints = [10];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .selectMany<number>((n, done) => {
                     var primes = findPrimes(n);
                     done(primes);
@@ -486,7 +548,7 @@ describe("Linquish", function () {
             var ints = [2, 3, 5];
             var result = new Array<number>();
 
-            linquish<number>(ints)
+            linquish(ints)
                 .select<number>((prime, done) => {
                     done(findNextPrimeNumber(prime));
                 })
@@ -507,7 +569,7 @@ describe("Linquish", function () {
 
             var ints = [25];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .selectMany<number>((n, done) => {
                     var primes = findPrimes(n);
                     done(primes);
@@ -517,7 +579,7 @@ describe("Linquish", function () {
                 })
                 .run((result) => {
                     expect(result).to.deep.equal([2, 23]);
-                    done();
+                    done();``
                 });
 
         });
@@ -526,7 +588,7 @@ describe("Linquish", function () {
 
             var ints = [250];
 
-            linquish<number>(ints)
+            linquish(ints)
                 .selectMany<number>((n, done) => {
                     var primes = findPrimes(n);
                     done(primes);
@@ -543,124 +605,124 @@ describe("Linquish", function () {
                 });
 
         });
-    });
 
-    describe("Gator", function() {
-
-        it('Test gator without gating.', function(done) {
-
-            var result = [];
-            var gator = new Gator(0, 0);
-            var z = 0;
-
-            for (let i = 0; i < 3; i++) {
-                gator.schedule((ready) => {
-                    result.push(result.length);
-                    z += result.length;
-                    ready();
-                });
-            }
-
-            expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
-            expect(result, 'Should be equal to [0, 1, 2]').to.deep.equal([0, 1, 2]);
-            done();
-
-        });
-
-        it("Gate should not be used when there are enough slots. Check if all operation finish in time.", function(done) {
-
-            var gator = new Gator(3, 20);
-
-            var stamp = new Date().getTime();
-            var diff = 0;
-            var z = 0;
-
-            for (let i = 0; i < 3; i++) {
-
-                gator.schedule((ready) => {
-
-                    z += (i + 1);
-
-                    diff = new Date().getTime() - stamp;
-                    ready();
-                });
-            }
-
-            setTimeout(() => {
-                expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
-                expect(diff, 'Should be greater or less than 100.').to.be.lessThan(100);
-                done();
-            }, 25);
-
-        });
-
-        it("Gate should be used when there aren't.", function(done) {
-
-            var gator = new Gator(2, 20);
-
-            var stamp = new Date().getTime();
-            var diff = 0;
-            var z = 0;
-
-            for (let i = 0; i < 3; i++) {
-
-                gator.schedule((ready) => {
-
-                    z += (i + 1);
-
-                    diff = new Date().getTime() - stamp;
-                    ready();
-                });
-            }
-
-            setTimeout(() => {
-                expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
-                expect(diff, 'Should be greater or equal than 20.').to.be.gte(20);
-                done();
-            }, 25);
-
-        });
-
-        it("Test long running gates.", function(done) {
-
-            var gator = new Gator(2, 10);
-
-            var stamp = new Date().getTime();
-            var z = 0;
-            var diffs = [];
-
-            for (let i = 0; i < 3; i++) {
-
-                gator.schedule((ready) => {
-
-                    let diff = new Date().getTime() - stamp;
-                    diffs.push(diff);
-
-                    setTimeout(() => {
-                        z += (i + 1);
-                        ready();
-
-                    }, 11);
-                });
-            }
-
-            setTimeout(() => {
-
-                expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
-
-                expect(diffs[0], '1st diff should be less than 10.').to.be.lessThan(10);
-                expect(diffs[1], '1st diff should be less than 10.').to.be.lessThan(10);
-                expect(diffs[2], '2st diff should be less than 20 (2 gate cycles).').to.be.gte(20);
-
-                done();
-
-            }, 40);
-
-        });
     });
 });
 
 
+describe("Gator", function () {
+
+    it('Test gator without gating.', function (done) {
+
+        var result = [];
+        var gator = new Gator(0, 0);
+        var z = 0;
+
+        for (let i = 0; i < 3; i++) {
+            gator.schedule((ready) => {
+                result.push(result.length);
+                z += result.length;
+                ready();
+            });
+        }
+
+        expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
+        expect(result, 'Should be equal to [0, 1, 2]').to.deep.equal([0, 1, 2]);
+        done();
+
+    });
+
+    it("Gate should not be used when there are enough slots. Check if all operation finish in time.", function (done) {
+
+        var gator = new Gator(3, 20);
+
+        var stamp = new Date().getTime();
+        var diff = 0;
+        var z = 0;
+
+        for (let i = 0; i < 3; i++) {
+
+            gator.schedule((ready) => {
+
+                z += (i + 1);
+
+                diff = new Date().getTime() - stamp;
+                ready();
+            });
+        }
+
+        setTimeout(() => {
+            expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
+            expect(diff, 'Should be greater or less than 100.').to.be.lessThan(100);
+            done();
+        }, 25);
+
+    });
+
+    it("Gate should be used when there aren't.", function (done) {
+
+        var gator = new Gator(2, 20);
+
+        var stamp = new Date().getTime();
+        var diff = 0;
+        var z = 0;
+
+        for (let i = 0; i < 3; i++) {
+
+            gator.schedule((ready) => {
+
+                z += (i + 1);
+
+                diff = new Date().getTime() - stamp;
+                ready();
+            });
+        }
+
+        setTimeout(() => {
+            expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
+            expect(diff, 'Should be greater or equal than 20.').to.be.gte(20);
+            done();
+        }, 25);
+
+    });
+
+    it("Test long running gates.", function (done) {
+
+        var gator = new Gator(2, 10);
+
+        var stamp = new Date().getTime();
+        var z = 0;
+        var diffs = [];
+
+        for (let i = 0; i < 3; i++) {
+
+            gator.schedule((ready) => {
+
+                let diff = new Date().getTime() - stamp;
+                diffs.push(diff);
+
+                setTimeout(() => {
+                    z += (i + 1);
+                    ready();
+
+                }, 11);
+            });
+        }
+
+        setTimeout(() => {
+
+            expect(z, 'Z should be 6 (1+2+3). Make sure everything is executed.').to.be.eq(6);
+
+            expect(diffs[0], '1st diff should be less than 10.').to.be.lessThan(10);
+            expect(diffs[1], '1st diff should be less than 10.').to.be.lessThan(10);
+            expect(diffs[2], '2st diff should be less than 20 (2 gate cycles).').to.be.gte(20);
+
+            done();
+
+        }, 40);
+
+    });
+});
 
 function findNextPrimeNumber(n: number) {
 

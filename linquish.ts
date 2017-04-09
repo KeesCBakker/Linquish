@@ -1,30 +1,10 @@
 import { ISimpleEvent, SimpleEventDispatcher } from 'strongly-typed-events';
 
-export interface ILinquish<T> {
-
-    select<R>(callback: SelectCallbackType<T, R>): IGateableLinquish<R>;
-    where(callback: WhereCallbackType<T>): IGateableLinquish<T>;
-    forEach(callback: ForEachCallbackType<T>): IGateableLinquish<T>;
-    selectMany<R>(callback: SelectManyCallbackType<T, R>): IGateableLinquish<R>;
-    wait(): ILinquish<T>;
-    run(callback?: RunCallbackType<T>): void;
-}
-
-export interface IGateableLinquish<T> extends ILinquish<T>, ITimeoutableLinqish<T> {
-
-    gate(slots: number, spanInMs: number): ITimeoutableLinqish<T>;
-}
-
-export interface ITimeoutableLinqish<T> extends ILinquish<T> {
-
-    timeout(x: number): ILinquish<T>;
-}
-
 /**
  * Linquish provides a way of traversing an array in an asynchronous way.
  * Each operation is queued until it is executes by the run function.
  */
-export class Linquish<T> implements IGateableLinquish<T> {
+export class Linquish<T> implements ILinquish<T>, IConditionalLinquish<T> {
 
     private _actions = new Array<Action>();
     private _array = new Array<T>();
@@ -33,28 +13,28 @@ export class Linquish<T> implements IGateableLinquish<T> {
         array.forEach(a => this._array.push(a));
     }
 
-    public select<R>(callback: SelectCallbackType<T, R>): IGateableLinquish<R> {
+    public select<R>(callback: SelectCallbackType<T, R>): IConditionalLinquish<R> {
         var a = new SelectAction<T, R>(callback);
         this._actions.push(a);
-        return <IGateableLinquish<R>><any>this;
+        return <IConditionalLinquish<R>><any>this;
     }
 
-    public where(callback: WhereCallbackType<T>): IGateableLinquish<T> {
+    public where(callback: WhereCallbackType<T>): IConditionalLinquish<T> {
         var a = new WhereAction<T>(callback);
         this._actions.push(a);
         return this;
     }
 
-    public forEach(callback: ForEachCallbackType<T>): IGateableLinquish<T> {
+    public forEach(callback: ForEachCallbackType<T>): IConditionalLinquish<T> {
         var a = new ForEachAction<T>(callback);
         this._actions.push(a);
         return this;
     }
 
-    public selectMany<R>(callback: SelectManyCallbackType<T, R>): IGateableLinquish<R> {
+    public selectMany<R>(callback: SelectManyCallbackType<T, R>): IConditionalLinquish<R> {
         var a = new SelectManyAction<T, R>(callback);
         this._actions.push(a);
-        return <IGateableLinquish<R>><any>this;
+        return <IConditionalLinquish<R>><any>this;
     }
 
     public wait(): Linquish<T> {
@@ -80,12 +60,24 @@ export class Linquish<T> implements IGateableLinquish<T> {
         return this;
     }
 
-    public gate(slots: number, spanInMs: number): ITimeoutableLinqish<T>{
+    public gate(slots: number, spanInMs: number): ITimeoutableLinqish<T> {
         if (this._actions.length > 0) {
             var a = this._actions[this._actions.length - 1];
-            if (a instanceof TimeoutAction) {
+            if (a instanceof GateAction) {
                 (<GateAction>a).slots = slots;
                 (<GateAction>a).spanInMs = spanInMs;
+            }
+        }
+
+        return this;
+    }
+
+    public when(condition: ConditionCallbackType<T>): IConditionalLinquish<T> {
+
+        if (this._actions.length > 0) {
+            var a = this._actions[this._actions.length - 1];
+            if (a instanceof ConditionalAction) {
+                (<ConditionalAction>a).addCondition(condition);
             }
         }
 
@@ -341,7 +333,38 @@ abstract class GateAction extends TimeoutAction {
         });
     }
 
-    protected abstract work(section: Section, timeout: any, ready: () => void ): void;
+    protected abstract work(section: Section, timeout: any, ready: () => void): void;
+}
+
+abstract class ConditionalAction extends GateAction {
+
+    private _conditions = new Array<ConditionCallbackType<any>>();
+
+    constructor() {
+        super();
+    }
+
+    public addCondition(condition: ConditionCallbackType<any>) {
+        if (condition != null) {
+            this._conditions.push(condition);
+        }
+    }
+
+    protected run(section: Section): void {
+
+        var exclude = this._conditions.some(c => {
+            return !c(section.item);
+        });
+
+        if (exclude) {
+            setTimeout(() => {
+                section.run();
+            }, 2);
+        }
+        else {
+            super.run(section);
+        }
+    }
 }
 
 class SelectAction<T, R> extends GateAction {
@@ -386,7 +409,7 @@ class WhereAction<T> extends GateAction {
     }
 }
 
-class ForEachAction<T> extends GateAction {
+class ForEachAction<T> extends ConditionalAction {
 
     constructor(private callback: ForEachCallbackType<T>) {
         super();
@@ -461,6 +484,10 @@ export interface WhereReturnCallbackType {
 
 export interface WhereCallbackType<T> {
     (input: T, ready: WhereReturnCallbackType);
+}
+
+export interface ConditionCallbackType<T> {
+    (input: T): boolean;
 }
 
 export interface ForEachCallbackType<T> {
@@ -564,4 +591,29 @@ export class Gator {
             }, this.spanInMs);
         }
     }
+}
+
+export interface ILinquish<T> {
+
+    select<R>(callback: SelectCallbackType<T, R>): IGateableLinquish<R>;
+    where(callback: WhereCallbackType<T>): IGateableLinquish<T>;
+    forEach(callback: ForEachCallbackType<T>): IConditionalLinquish<T>;
+    selectMany<R>(callback: SelectManyCallbackType<T, R>): IGateableLinquish<R>;
+    wait(): ILinquish<T>;
+    run(callback?: RunCallbackType<T>): void;
+}
+
+export interface IConditionalLinquish<T> extends IGateableLinquish<T>, ILinquish<T> {
+
+    when(condition: ConditionCallbackType<T>): IConditionalLinquish<T>;
+}
+
+export interface IGateableLinquish<T> extends ITimeoutableLinqish<T>, ILinquish<T> {
+
+    gate(slots: number, spanInMs: number): ITimeoutableLinqish<T>;
+}
+
+export interface ITimeoutableLinqish<T> extends ILinquish<T> {
+
+    timeout(x: number): ILinquish<T>;
 }

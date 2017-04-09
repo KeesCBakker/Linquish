@@ -5,17 +5,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var strongly_typed_events_1 = require("strongly-typed-events");
-/* small bridge to web JS */
-if (typeof (module) === 'undefined') {
-    (function (w) {
-        w.module = w.module || {};
-        w.module.exports = w.module.exports || {};
-        w.exports = w.exports || w.module.exports || {};
-        w.require = w.require || function (src) {
-            return w[src] || w.exports;
-        };
-    }(window || {}));
-}
 /**
  * Linquish provides a way of traversing an array in an asynchronous way.
  * Each operation is queued until it is executes by the run function.
@@ -68,9 +57,18 @@ var Linquish = (function () {
     Linquish.prototype.gate = function (slots, spanInMs) {
         if (this._actions.length > 0) {
             var a = this._actions[this._actions.length - 1];
-            if (a instanceof TimeoutAction) {
+            if (a instanceof GateAction) {
                 a.slots = slots;
                 a.spanInMs = spanInMs;
+            }
+        }
+        return this;
+    };
+    Linquish.prototype.when = function (condition) {
+        if (this._actions.length > 0) {
+            var a = this._actions[this._actions.length - 1];
+            if (a instanceof ConditionalAction) {
+                a.addCondition(condition);
             }
         }
         return this;
@@ -271,6 +269,33 @@ var GateAction = (function (_super) {
     };
     return GateAction;
 }(TimeoutAction));
+var ConditionalAction = (function (_super) {
+    __extends(ConditionalAction, _super);
+    function ConditionalAction() {
+        var _this = _super.call(this) || this;
+        _this._conditions = new Array();
+        return _this;
+    }
+    ConditionalAction.prototype.addCondition = function (condition) {
+        if (condition != null) {
+            this._conditions.push(condition);
+        }
+    };
+    ConditionalAction.prototype.run = function (section) {
+        var exclude = this._conditions.some(function (c) {
+            return !c(section.item);
+        });
+        if (exclude) {
+            setTimeout(function () {
+                section.run();
+            }, 2);
+        }
+        else {
+            _super.prototype.run.call(this, section);
+        }
+    };
+    return ConditionalAction;
+}(GateAction));
 var SelectAction = (function (_super) {
     __extends(SelectAction, _super);
     function SelectAction(callback) {
@@ -322,7 +347,7 @@ var ForEachAction = (function (_super) {
         });
     };
     return ForEachAction;
-}(GateAction));
+}(ConditionalAction));
 var SelectManyAction = (function (_super) {
     __extends(SelectManyAction, _super);
     function SelectManyAction(callback) {
@@ -363,6 +388,8 @@ var WaitAction = (function (_super) {
 var exp = function (input) {
     return new Linquish(input);
 };
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = exp;
 var Gator = (function () {
     function Gator(slots, spanInMs) {
         this.slots = slots;
@@ -415,6 +442,3 @@ var Gator = (function () {
     return Gator;
 }());
 exports.Gator = Gator;
-module.exports = exp;
-module.exports.Linquish = Linquish;
-module.exports.Gator = Gator;
