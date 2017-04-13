@@ -1,6 +1,6 @@
 {
   "name": "linquish",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Add something that feels like async linq queues.",
   "main": "./linquish.js",
   "types": "./linquish.d.ts",

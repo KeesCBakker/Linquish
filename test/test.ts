@@ -41,6 +41,21 @@ describe("Linquish", function () {
             });
 
         });
+
+        it("Run with async producer.", function (done) {
+
+            linquish<number>((select) => {
+                setTimeout(() => {
+                    select([1, 2, 4, 8, 16]);
+                }, 20);
+            })
+                .run((result, meta) => {
+
+                    expect(result, 'Should be equal to [1, 2, 4, 8, 16]').to.deep.equal([1, 2, 4, 8, 16]);
+                    expect(meta.started.getTime()).to.be.lessThan(meta.finished.getTime());
+                    done();
+                });
+        });
     });
 
     describe("Each", function () {
@@ -732,7 +747,7 @@ describe("Gator", function () {
 
             done();
 
-        }, 40);
+        }, 45);
 
     });
 });

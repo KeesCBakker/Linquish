@@ -44,7 +44,7 @@ export interface DefaultSelectCallbackType<T> {
     (ready: SelectReturnManyCallbackType<T>): void;
 }
 export interface RunCallbackType<T> {
-    (result: Array<T>): void;
+    (result: Array<T>, meta?: RunMeta): void;
 }
 export interface ILinquishStatic {
     <T>(input: Array<T> | DefaultSelectCallbackType<T>): ILinquish<T>;
@@ -85,4 +85,13 @@ export interface IGateableLinquish<T> extends ITimeoutableLinqish<T>, ILinquish<
 }
 export interface ITimeoutableLinqish<T> extends ILinquish<T> {
     timeout(x: number): ILinquish<T>;
+}
+export declare class RunMeta {
+    private _started;
+    private _finished;
+    constructor();
+    ready(): void;
+    readonly started: Date;
+    readonly finished: Date;
+    readonly runTime: number;
 }

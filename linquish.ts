@@ -87,8 +87,7 @@ export class Linquish<T> implements ILinquish<T>, IConditionalLinquish<T> {
 
 abstract class BaseSub {
 
-    public constructor() {
-    }
+    public constructor() { }
 
     public abstract signalWait(): void;
     public abstract signalFinished(): void;
@@ -98,10 +97,12 @@ abstract class BaseSub {
 
 class Sub<T> extends BaseSub {
 
+    private _callback: RunCallbackType<T>;
+    private _isFinished = false;
+    private _sections = new Array<Section>();
+    private _meta: RunMeta;
+
     public actions = new Array<Action>();
-    public sections = new Array<Section>();
-    private callback: RunCallbackType<T>;
-    private isFinished = false;
 
     constructor(actions: Array<Action>, items: Array<T>, startAction?: number) {
 
@@ -121,55 +122,56 @@ class Sub<T> extends BaseSub {
 
             });
 
-            this.sections.push(section);
+            this._sections.push(section);
         });
     }
 
     public signalWait(): void {
 
-        var allFinished = this.sections.every(a => Sub.IsFinishedState(a.state));
+        var allFinished = this._sections.every(a => Sub.IsFinishedState(a.state));
         if (allFinished) {
             this.signalFinished();
             return;
         }
 
-        var allWait = this.sections.every(a => Sub.IsWaitingState(a.state));
+        var allWait = this._sections.every(a => Sub.IsWaitingState(a.state));
         if (allWait) {
-            this.sections.forEach(a => a.run());
+            this._sections.forEach(a => a.run());
         }
     }
 
     public signalFinished(): void {
 
-        if (this.isFinished) {
+        if (this._isFinished) {
             return;
         }
 
-        var allFinished = this.sections.every(a => Sub.IsFinishedState(a.state));
+        var allFinished = this._sections.every(a => Sub.IsFinishedState(a.state));
         if (!allFinished) {
             return;
         }
 
-        this.isFinished = true;
+        this._isFinished = true;
+        this._meta.ready();
 
-        if (this.callback != null) {
+        if (this._callback != null) {
             var results = this.get();
-            this.callback(results);
+            this._callback(results, this._meta);
         }
     }
 
     public get(): Array<T> {
 
         var result = new Array<T>();
-        this.sections.forEach(a => a.get().forEach(b => result.push(b)));
+        this._sections.forEach(a => a.get().forEach(b => result.push(b)));
         return result;
-
     }
 
     public run(callback?: RunCallbackType<T>): void {
 
-        this.callback = callback;
-        this.sections.forEach(a => a.run());
+        this._meta = new RunMeta();
+        this._callback = callback;
+        this._sections.forEach(a => a.run());
     }
 
     public static IsFinishedState(type: StateType) {
@@ -232,7 +234,7 @@ class Section {
                 this.nr = this.nr + 1;
                 action.execute(this);
 
-            }, 1);
+            }, 0);
         }
     }
 
@@ -304,9 +306,10 @@ abstract class TimeoutAction extends Action {
 
 abstract class GateAction extends TimeoutAction {
 
+    private _gator: Gator;
+
     public slots: number;
     public spanInMs: number;
-    public gator: Gator;
 
     constructor() {
         super();
@@ -314,11 +317,11 @@ abstract class GateAction extends TimeoutAction {
 
     protected run(section: Section): void {
 
-        if (this.gator == null) {
-            this.gator = new Gator(this.slots, this.spanInMs);
+        if (this._gator == null) {
+            this._gator = new Gator(this.slots, this.spanInMs);
         }
 
-        this.gator.schedule((ready: ICallback) => {
+        this._gator.schedule((ready: ICallback) => {
             this.workOnItem(section, ready);
         });
     }
@@ -357,9 +360,9 @@ abstract class ConditionalAction extends GateAction {
         });
 
         if (exclude) {
-            setTimeout(() => {
-                section.run();
-            }, 2);
+            //run section - this action
+            //can be skipped
+            section.run();
         }
         else {
             super.run(section);
@@ -506,9 +509,8 @@ export interface DefaultSelectCallbackType<T> {
     (ready: SelectReturnManyCallbackType<T>): void
 }
 
-
 export interface RunCallbackType<T> {
-    (result: Array<T>): void
+    (result: Array<T>, meta?: RunMeta): void
 }
 
 export interface ILinquishStatic {
@@ -631,4 +633,32 @@ export interface IGateableLinquish<T> extends ITimeoutableLinqish<T>, ILinquish<
 export interface ITimeoutableLinqish<T> extends ILinquish<T> {
 
     timeout(x: number): ILinquish<T>;
+}
+
+export class RunMeta {
+
+    private _started: Date;
+    private _finished: Date;
+
+    public constructor() {
+        this._started = new Date();
+    }
+
+    public ready() {
+        if (this._finished == null) {
+            this._finished = new Date();
+        }
+    }
+
+    public get started() {
+        return this._started;
+    }
+
+    public get finished() {
+        return this._finished;
+    }
+
+    public get runTime() {
+        return this.finished.getTime() - this.started.getTime();
+    }
 }

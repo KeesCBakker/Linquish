@@ -27,6 +27,18 @@ describe("Linquish", function () {
                 done();
             });
         });
+        it("Run with async producer.", function (done) {
+            linquish_1.default(function (select) {
+                setTimeout(function () {
+                    select([1, 2, 4, 8, 16]);
+                }, 20);
+            })
+                .run(function (result, meta) {
+                chai_1.expect(result, 'Should be equal to [1, 2, 4, 8, 16]').to.deep.equal([1, 2, 4, 8, 16]);
+                chai_1.expect(meta.started.getTime()).to.be.lessThan(meta.finished.getTime());
+                done();
+            });
+        });
     });
     describe("Each", function () {
         it("Loop should not change results.", function (done) {
@@ -550,7 +562,7 @@ describe("Gator", function () {
             chai_1.expect(diffs[1], '1st diff should be less than 10.').to.be.lessThan(10);
             chai_1.expect(diffs[2], '2st diff should be less than 20 (2 gate cycles).').to.be.gte(20);
             done();
-        }, 40);
+        }, 45);
     });
 });
 function findNextPrimeNumber(n) {

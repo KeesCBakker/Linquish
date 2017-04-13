@@ -85,9 +85,9 @@ var Sub = (function (_super) {
     __extends(Sub, _super);
     function Sub(actions, items, startAction) {
         var _this = _super.call(this) || this;
+        _this._isFinished = false;
+        _this._sections = new Array();
         _this.actions = new Array();
-        _this.sections = new Array();
-        _this.isFinished = false;
         actions.forEach(function (a) { return _this.actions.push(a); });
         items.forEach(function (item) {
             var section = new Section(item, _this);
@@ -98,43 +98,45 @@ var Sub = (function (_super) {
             section.onStateChange.sub(function (state) {
                 _this.signalWait();
             });
-            _this.sections.push(section);
+            _this._sections.push(section);
         });
         return _this;
     }
     Sub.prototype.signalWait = function () {
-        var allFinished = this.sections.every(function (a) { return Sub.IsFinishedState(a.state); });
+        var allFinished = this._sections.every(function (a) { return Sub.IsFinishedState(a.state); });
         if (allFinished) {
             this.signalFinished();
             return;
         }
-        var allWait = this.sections.every(function (a) { return Sub.IsWaitingState(a.state); });
+        var allWait = this._sections.every(function (a) { return Sub.IsWaitingState(a.state); });
         if (allWait) {
-            this.sections.forEach(function (a) { return a.run(); });
+            this._sections.forEach(function (a) { return a.run(); });
         }
     };
     Sub.prototype.signalFinished = function () {
-        if (this.isFinished) {
+        if (this._isFinished) {
             return;
         }
-        var allFinished = this.sections.every(function (a) { return Sub.IsFinishedState(a.state); });
+        var allFinished = this._sections.every(function (a) { return Sub.IsFinishedState(a.state); });
         if (!allFinished) {
             return;
         }
-        this.isFinished = true;
-        if (this.callback != null) {
+        this._isFinished = true;
+        this._meta.ready();
+        if (this._callback != null) {
             var results = this.get();
-            this.callback(results);
+            this._callback(results, this._meta);
         }
     };
     Sub.prototype.get = function () {
         var result = new Array();
-        this.sections.forEach(function (a) { return a.get().forEach(function (b) { return result.push(b); }); });
+        this._sections.forEach(function (a) { return a.get().forEach(function (b) { return result.push(b); }); });
         return result;
     };
     Sub.prototype.run = function (callback) {
-        this.callback = callback;
-        this.sections.forEach(function (a) { return a.run(); });
+        this._meta = new RunMeta();
+        this._callback = callback;
+        this._sections.forEach(function (a) { return a.run(); });
     };
     Sub.IsFinishedState = function (type) {
         return type == StateType.Error || type == StateType.Finished || type == StateType.Skip || type == StateType.Timeout;
@@ -189,7 +191,7 @@ var Section = (function () {
                 var action = _this.owner.actions[_this.nr];
                 _this.nr = _this.nr + 1;
                 action.execute(_this);
-            }, 1);
+            }, 0);
         }
     };
     Section.prototype.get = function () {
@@ -253,10 +255,10 @@ var GateAction = (function (_super) {
     }
     GateAction.prototype.run = function (section) {
         var _this = this;
-        if (this.gator == null) {
-            this.gator = new Gator(this.slots, this.spanInMs);
+        if (this._gator == null) {
+            this._gator = new Gator(this.slots, this.spanInMs);
         }
-        this.gator.schedule(function (ready) {
+        this._gator.schedule(function (ready) {
             _this.workOnItem(section, ready);
         });
     };
@@ -286,9 +288,9 @@ var ConditionalAction = (function (_super) {
             return !c(section.item);
         });
         if (exclude) {
-            setTimeout(function () {
-                section.run();
-            }, 2);
+            //run section - this action
+            //can be skipped
+            section.run();
         }
         else {
             _super.prototype.run.call(this, section);
@@ -449,3 +451,36 @@ var Gator = (function () {
     return Gator;
 }());
 exports.Gator = Gator;
+var RunMeta = (function () {
+    function RunMeta() {
+        this._started = new Date();
+    }
+    RunMeta.prototype.ready = function () {
+        if (this._finished == null) {
+            this._finished = new Date();
+        }
+    };
+    Object.defineProperty(RunMeta.prototype, "started", {
+        get: function () {
+            return this._started;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(RunMeta.prototype, "finished", {
+        get: function () {
+            return this._finished;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(RunMeta.prototype, "runTime", {
+        get: function () {
+            return this.finished.getTime() - this.started.getTime();
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return RunMeta;
+}());
+exports.RunMeta = RunMeta;
